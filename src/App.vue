@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import AppSidebar from './components/layout/AppSidebar.vue'
 </script>
 
 <template>
-  <header>
-    <div class="wrapper">
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
+  <SidebarProvider>
+    <AppSidebar />
+    <main class="w-full p-4">
+      <SidebarTrigger class="size-6" />
+      <RouterView />
+    </main>
+  </SidebarProvider>
 </template>
