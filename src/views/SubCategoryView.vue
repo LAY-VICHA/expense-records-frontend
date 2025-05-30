@@ -1,10 +1,10 @@
 <template>
   <div class="p-8">
-    <div class="text-3xl font-bold">Category</div>
+    <div class="text-3xl font-bold">Sub Category</div>
 
     <div class="py-4 flex justify-between items-center gap-4">
-      <SearchComponent @search="handleSearch" placeholder="Search categories" />
-      <CreateCategory />
+      <SearchComponent @search="handleSearch" placeholder="Search subcategories" />
+      <CreateSubCategory />
     </div>
 
     <div v-if="isLoading" class="w-full flex justify-center pt-4"><Loading /></div>
@@ -14,6 +14,7 @@
           <TableHead class="w-[100px]"> No. </TableHead>
           <TableHead>Name</TableHead>
           <TableHead class="w-50 md:w-75 2xl:w-120">Description</TableHead>
+          <TableHead>Category</TableHead>
           <TableHead>Created At</TableHead>
           <TableHead class="text-right"> Action </TableHead>
         </TableRow>
@@ -28,16 +29,17 @@
             class="truncate max-w-50 md:max-w-75 2xl:max-w-120 whitespace-nowrap overflow-hidden"
             >{{ item.description }}</TableCell
           >
-          <TableCell class="">
+          <TableCell>{{ item.category.name }}</TableCell>
+          <TableCell>
             {{ convertDate(item.createdAt) }}
           </TableCell>
           <TableCell class="text-right flex justify-end gap-2.5 items-center">
             <SquarePen
-              @click="openEditCategory(item)"
+              @click="openEditSubCategory(item)"
               class="size-4 cursor-pointer hover:text-secondary"
             />
             <Trash2
-              @click="openDeleteCategory(item.id)"
+              @click="openDeleteSubCategory(item.id)"
               class="size-4 cursor-pointer hover:text-destructive"
             />
           </TableCell>
@@ -45,7 +47,7 @@
       </TableBody>
       <TableBody v-if="!data?.data?.items || data.data.items.length === 0">
         <TableRow>
-          <TableCell colspan="4" class="text-center">No categories found</TableCell>
+          <TableCell colspan="4" class="text-center">No subcategories found</TableCell>
         </TableRow>
       </TableBody>
       <TableCaption v-if="data?.data?.items">
@@ -53,8 +55,8 @@
       </TableCaption>
     </Table>
 
-    <EditCategory v-model="isEditDialogOpen" :category="selectedCategory" />
-    <DeleteCategory v-model="isDeleteDialogOpen" :categoryId="selectedId" />
+    <EditSubCategory v-model="isEditDialogOpen" :subCategory="selectedSubCategory" />
+    <DeleteSubCategory v-model="isDeleteDialogOpen" :subCategoryId="selectedId" />
   </div>
 </template>
 
@@ -71,13 +73,13 @@ import {
 import { SquarePen, Trash2 } from 'lucide-vue-next'
 import { keepPreviousData, useQuery } from '@tanstack/vue-query'
 import { useRoute, useRouter } from 'vue-router'
-import { ApiResponse, category, PaginatedResult } from '@/types/api-response'
+import { ApiResponse, editSubCategory, PaginatedResult, subCategory } from '@/types/api-response'
 import SearchComponent from '@/components/SearchComponent.vue'
 import { computed, ref } from 'vue'
 import Loading from '@/components/Loading.vue'
-import CreateCategory from '@/components/category/CreateCategory.vue'
-import EditCategory from '@/components/category/EditCategory.vue'
-import DeleteCategory from '@/components/category/DeleteCategory.vue'
+import CreateSubCategory from '@/components/sub-category/CreateSubCategory.vue'
+import EditSubCategory from '@/components/sub-category/EditSubCategory.vue'
+import DeleteSubCategory from '@/components/sub-category/DeleteSubCategory.vue'
 import PaginationComponent from '@/components/PaginationComponent.vue'
 
 const route = useRoute()
@@ -86,24 +88,22 @@ const page = computed(() => route.query.page ?? '1')
 const pageSize = computed(() => route.query.pageSize ?? '10')
 const name = computed(() => route.query.name ?? '')
 const isEditDialogOpen = ref(false)
-const selectedCategory = ref<CategoryFormValues>({
+const selectedSubCategory = ref<editSubCategory>({
   id: '',
   name: '',
   description: '',
+  category: {
+    id: '',
+    name: '',
+  },
 })
 const isDeleteDialogOpen = ref(false)
 const selectedId = ref<string>('')
 
-interface CategoryFormValues {
-  id: string
-  name: string
-  description: string
-}
-
-const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<category>>>({
-  queryFn: async () => await fetchCategory(),
+const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<subCategory>>>({
+  queryFn: async () => await fetchSubCategory(),
   queryKey: computed(() => [
-    'categories',
+    'subcategories',
     {
       page: page.value,
       pageSize: pageSize.value,
@@ -113,14 +113,14 @@ const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<category>>>({
   placeholderData: keepPreviousData,
 })
 
-const fetchCategory = async (): Promise<ApiResponse<PaginatedResult<category>>> => {
+const fetchSubCategory = async (): Promise<ApiResponse<PaginatedResult<subCategory>>> => {
   const query = new URLSearchParams()
   if (name.value) query.set('name', String(name.value))
   query.set('page', String(page.value))
   query.set('pageSize', String(pageSize.value))
   console.log(query)
 
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category?${query}`)
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/sub-category?${query}`)
 
   if (!response.ok) throw new Error('Cannot get data')
 
@@ -142,12 +142,12 @@ const handleSearch = (searchQuery: string) => {
   })
 }
 
-function openEditCategory(item: CategoryFormValues) {
-  selectedCategory.value = item
+function openEditSubCategory(item: editSubCategory) {
+  selectedSubCategory.value = item
   isEditDialogOpen.value = true
 }
 
-function openDeleteCategory(id: string) {
+function openDeleteSubCategory(id: string) {
   console.log(id)
   selectedId.value = id
   isDeleteDialogOpen.value = true
