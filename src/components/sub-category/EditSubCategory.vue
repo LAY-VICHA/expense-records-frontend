@@ -25,10 +25,10 @@
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent v-if="data?.data" class="max-h-[200px] overflow-y-auto">
+                  <SelectContent v-if="allCategories" class="max-h-[200px] overflow-y-auto">
                     <SelectGroup>
                       <SelectItem
-                        v-for="category in data.data"
+                        v-for="category in allCategories"
                         :key="category.id"
                         :value="category.id"
                       >
@@ -105,7 +105,7 @@ import * as z from 'zod'
 import { toast } from 'vue3-toastify'
 import Loading from '../Loading.vue'
 import { useRoute } from 'vue-router'
-import { allCategories, ApiResponse, editSubCategory } from '@/types/api-response'
+import { AllCategories, ApiResponse, EditSubCategory } from '@/types/api-response'
 
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
@@ -119,7 +119,7 @@ interface editedSubCategory {
 }
 
 const props = defineProps<{
-  subCategory: editSubCategory
+  subCategory: EditSubCategory
   modelValue: boolean
 }>()
 
@@ -142,22 +142,23 @@ const formSchema = toTypedSchema(
   }),
 )
 
-const fetchAllCategory = async (): Promise<ApiResponse<allCategories>> => {
+const fetchAllCategory = async (): Promise<ApiResponse<AllCategories>> => {
   const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category/all`)
 
   if (!response.ok) throw new Error('Cannot get data')
 
   const data = await response.json()
-  console.log(data.data)
 
   return data
 }
 
-const { data } = useQuery<ApiResponse<allCategories>>({
+const { data } = useQuery<ApiResponse<AllCategories>>({
   queryFn: async () => await fetchAllCategory(),
-  queryKey: computed(() => ['all-categories']),
+  queryKey: ['all-categories'],
   placeholderData: keepPreviousData,
 })
+
+const allCategories = computed(() => data.value?.data)
 
 const mutation = useMutation({
   mutationFn: async (data: editedSubCategory) => {

@@ -12,7 +12,7 @@ export interface PaginatedResult<TData> {
   pageSize: number
 }
 
-export type category = {
+export type Category = {
   name: string
   id: string
   description: string
@@ -20,14 +20,14 @@ export type category = {
   updatedAt: Date | null
 }
 
-export type subCategory = category & {
+export type SubCategory = Category & {
   category: {
     id: string
     name: string
   }
 }
 
-export type editSubCategory = {
+export type EditSubCategory = {
   id: string
   name: string
   description: string
@@ -37,7 +37,7 @@ export type editSubCategory = {
   }
 }
 
-export type categories = category & {
+export type Categories = Category & {
   subCategories: {
     name: string
     id: string
@@ -48,9 +48,9 @@ export type categories = category & {
   }[]
 }
 
-export type allCategories = categories[]
+export type AllCategories = Categories[]
 
-export type expenseRecord = {
+export type ExpenseRecord = {
   id: string
   expenseDate: Date
   amount: string
@@ -60,4 +60,44 @@ export type expenseRecord = {
   subCategory: string | null
   createdAt: Date
   updatedAt: Date | null
+}
+
+export type EditExpenseReocrd = {
+  id: string
+  expenseDate: Date
+  amount: string
+  currency: string
+  reason: string | null
+  category: string
+  subCategory: string | null
+}
+
+type DataPoints = {
+  date: string
+  amount: number
+}
+
+export type BarChartResponse = {
+  totalExpense: number
+  averageExpense: number
+  periodsWithData: number
+  dataPoints: DataPoints[]
+}
+
+export type CardDataResponse = {
+  totalExpense: number
+  totalDays: number
+  averagePerDay: number
+}
+
+type PieChartData = {
+  label: string
+  amount: number
+  percentage: number
+  count: number
+}
+
+export type PieChartResponse = {
+  totalExpense: number
+  pieChartData: PieChartData[]
 }

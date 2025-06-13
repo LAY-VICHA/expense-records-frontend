@@ -2,9 +2,8 @@
   <div class="p-8">
     <div class="text-3xl font-bold">Expense Record</div>
 
-    <div class="py-4 flex justify-between items-center gap-4">
+    <div class="py-4 pb-6 flex justify-between items-center gap-4">
       <QueryTools />
-      <!-- <CreateCategory /> -->
     </div>
 
     <div v-if="isLoading" class="w-full flex justify-center pt-4"><Loading /></div>
@@ -21,10 +20,10 @@
           <TableHead class="text-right"> Action </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody v-if="data?.data?.items">
-        <TableRow v-for="(item, index) in data.data.items" :key="index">
+      <TableBody v-if="expenseRecord?.items">
+        <TableRow v-for="(item, index) in expenseRecord.items" :key="index">
           <TableCell class="font-medium">
-            {{ (data.data.currentPage - 1) * data.data.pageSize + index + 1 }}
+            {{ (expenseRecord.currentPage - 1) * expenseRecord.pageSize + index + 1 }}
           </TableCell>
           <TableCell>{{ convertDate(item.expenseDate) }}</TableCell>
           <TableCell>{{ item.category }}</TableCell>
@@ -36,23 +35,32 @@
           <TableCell>{{ item.amount }}</TableCell>
           <TableCell>{{ item.currency }}</TableCell>
           <TableCell class="text-right flex justify-end gap-2.5 items-center">
-            <SquarePen class="size-4 cursor-pointer hover:text-secondary" />
-            <Trash2 class="size-4 cursor-pointer hover:text-destructive" />
+            <SquarePen
+              @click="openEditExpenseRecord(item)"
+              class="size-4 cursor-pointer hover:text-secondary"
+            />
+            <Trash2
+              @click="openDeleteExpenseRecord(item.id)"
+              class="size-4 cursor-pointer hover:text-destructive"
+            />
           </TableCell>
         </TableRow>
       </TableBody>
-      <TableBody v-if="!data?.data?.items || data.data.items.length === 0">
+      <TableBody v-if="!expenseRecord?.items || expenseRecord.items.length === 0">
         <TableRow>
-          <TableCell colspan="4" class="text-center">No expense records found</TableCell>
+          <TableCell colspan="8" class="text-center">No expense records found</TableCell>
         </TableRow>
       </TableBody>
-      <TableCaption v-if="data?.data?.items">
-        <PaginationComponent :page-size="data.data.pageSize" :total="data.data.totalItems" />
+      <TableCaption v-if="expenseRecord?.items">
+        <PaginationComponent
+          :page-size="expenseRecord.pageSize"
+          :total="expenseRecord.totalItems"
+        />
       </TableCaption>
     </Table>
 
-    <!-- <EditCategory v-model="isEditDialogOpen" :category="selectedCategory" />
-    <DeleteCategory v-model="isDeleteDialogOpen" :categoryId="selectedId" /> -->
+    <EditExpenseRecord v-model="isEditDialogOpen" :expenseRecord="selectedExpenseRecord" />
+    <DeleteExpenseRecord v-model="isDeleteDialogOpen" :expenseRecordId="selectedId" />
   </div>
 </template>
 
@@ -69,13 +77,17 @@ import {
 import { SquarePen, Trash2 } from 'lucide-vue-next'
 import { keepPreviousData, useQuery } from '@tanstack/vue-query'
 import { useRoute } from 'vue-router'
-import { ApiResponse, expenseRecord, PaginatedResult } from '@/types/api-response'
+import {
+  ApiResponse,
+  ExpenseRecord,
+  EditExpenseReocrd,
+  PaginatedResult,
+} from '@/types/api-response'
 import { computed, ref } from 'vue'
 import Loading from '@/components/Loading.vue'
 import QueryTools from '@/components/expense-record/QueryTools.vue'
-// import CreateCategory from '@/components/category/CreateCategory.vue'
-// import EditCategory from '@/components/category/EditCategory.vue'
-// import DeleteCategory from '@/components/category/DeleteCategory.vue'
+import EditExpenseRecord from '@/components/expense-record/EditExpenseRecord.vue'
+import DeleteExpenseRecord from '@/components/expense-record/DeleteExpenseRecord.vue'
 import PaginationComponent from '@/components/PaginationComponent.vue'
 
 const route = useRoute()
@@ -88,22 +100,20 @@ const filterCategory = computed(() => route.query.filterCategory ?? '')
 const filterSubCategory = computed(() => route.query.filterSubCategory ?? '')
 const filterStartDate = computed(() => route.query.filterStartDate ?? '')
 const filterEndDate = computed(() => route.query.filterEndDate ?? '')
-// const isEditDialogOpen = ref(false)
-// const selectedCategory = ref<CategoryFormValues>({
-//   id: '',
-//   name: '',
-//   description: '',
-// })
-// const isDeleteDialogOpen = ref(false)
-// const selectedId = ref<string>('')
+const isEditDialogOpen = ref(false)
+const selectedExpenseRecord = ref<EditExpenseReocrd>({
+  id: '',
+  expenseDate: new Date(),
+  amount: '',
+  currency: '',
+  reason: '',
+  category: '',
+  subCategory: '',
+})
+const isDeleteDialogOpen = ref(false)
+const selectedId = ref<string>('')
 
-// interface ExpenseRecordFormValues {
-//   id: string
-//   name: string
-//   description: string
-// }
-
-const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<expenseRecord>>>({
+const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<ExpenseRecord>>>({
   queryFn: async () => await fetchExpenseRecord(),
   queryKey: computed(() => [
     'expense-records',
@@ -111,12 +121,17 @@ const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<expenseRecord>>
       page: page.value,
       pageSize: pageSize.value,
       ...(reason.value ? { reason } : {}),
+      ...(sortBy.value ? { sortBy } : {}),
+      ...(filterCategory.value ? { filterCategory } : {}),
+      ...(filterSubCategory.value ? { filterSubCategory } : {}),
+      ...(filterStartDate.value ? { filterStartDate } : {}),
+      ...(filterEndDate.value ? { filterEndDate } : {}),
     },
   ]),
   placeholderData: keepPreviousData,
 })
 
-const fetchExpenseRecord = async (): Promise<ApiResponse<PaginatedResult<expenseRecord>>> => {
+const fetchExpenseRecord = async (): Promise<ApiResponse<PaginatedResult<ExpenseRecord>>> => {
   const query = new URLSearchParams()
   if (reason.value) query.set('reason', String(reason.value))
   if (sortBy.value) query.set('sortBy', String(sortBy.value))
@@ -136,19 +151,23 @@ const fetchExpenseRecord = async (): Promise<ApiResponse<PaginatedResult<expense
   return data
 }
 
+const expenseRecord = computed(() => data.value?.data)
+
 const convertDate = (date: Date): string => {
   const dateString = new Date(date).toISOString()
   return dateString.split('T')[0]
 }
 
-// function openEditCategory(item: CategoryFormValues) {
-//   selectedCategory.value = item
-//   isEditDialogOpen.value = true
-// }
+function openEditExpenseRecord(item: EditExpenseReocrd) {
+  console.log('open edit expense record', item)
 
-// function openDeleteCategory(id: string) {
-//   console.log(id)
-//   selectedId.value = id
-//   isDeleteDialogOpen.value = true
-// }
+  selectedExpenseRecord.value = item
+  isEditDialogOpen.value = true
+}
+
+function openDeleteExpenseRecord(id: string) {
+  console.log(id)
+  selectedId.value = id
+  isDeleteDialogOpen.value = true
+}
 </script>

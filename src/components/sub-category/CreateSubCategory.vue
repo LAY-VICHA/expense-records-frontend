@@ -2,7 +2,7 @@
   <Form v-slot="{ handleSubmit }" as="" :validation-schema="formSchema">
     <Dialog v-model:open="isDialogOpen">
       <DialogTrigger as-child>
-        <Button class="text-base"> Create </Button>
+        <Button class=""> Create </Button>
       </DialogTrigger>
       <DialogContent class="sm:max-w-[425px]">
         <DialogHeader>
@@ -20,10 +20,10 @@
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent v-if="data?.data" class="max-h-[200px] overflow-y-auto">
+                  <SelectContent v-if="allCategories" class="max-h-[200px] overflow-y-auto">
                     <SelectGroup>
                       <SelectItem
-                        v-for="category in data.data"
+                        v-for="category in allCategories"
                         :key="category.id"
                         :value="category.id"
                       >
@@ -105,7 +105,7 @@ import * as z from 'zod'
 import Loading from '../Loading.vue'
 import { computed, ref } from 'vue'
 import { toast } from 'vue3-toastify'
-import { ApiResponse, allCategories } from '@/types/api-response'
+import { ApiResponse, AllCategories } from '@/types/api-response'
 
 interface SubCategoryFormValues {
   categoryId: string
@@ -123,22 +123,23 @@ const formSchema = toTypedSchema(
   }),
 )
 
-const fetchAllCategory = async (): Promise<ApiResponse<allCategories>> => {
+const fetchAllCategory = async (): Promise<ApiResponse<AllCategories>> => {
   const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category/all`)
 
   if (!response.ok) throw new Error('Cannot get data')
 
   const data = await response.json()
-  console.log(data.data)
 
   return data
 }
 
-const { data } = useQuery<ApiResponse<allCategories>>({
+const { data } = useQuery<ApiResponse<AllCategories>>({
   queryFn: async () => await fetchAllCategory(),
-  queryKey: computed(() => ['all-categories']),
+  queryKey: ['all-categories'],
   placeholderData: keepPreviousData,
 })
+
+const allCategories = computed(() => data.value?.data)
 
 const createSubCategory = async (data: SubCategoryFormValues) => {
   const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/sub-category`, {

@@ -3,7 +3,7 @@
     <div class="text-3xl font-bold">Sub Category</div>
 
     <div class="py-4 flex justify-between items-center gap-4">
-      <SearchComponent @search="handleSearch" placeholder="Search subcategories" />
+      <SearchComponent @search="handleSearch" placeholder="Search subcategories" class="max-w-sm" />
       <CreateSubCategory />
     </div>
 
@@ -19,10 +19,10 @@
           <TableHead class="text-right"> Action </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody v-if="data?.data?.items">
-        <TableRow v-for="(item, index) in data.data.items" :key="index">
+      <TableBody v-if="subCategories?.items">
+        <TableRow v-for="(item, index) in subCategories.items" :key="index">
           <TableCell class="font-medium">
-            {{ (data.data.currentPage - 1) * data.data.pageSize + index + 1 }}
+            {{ (subCategories.currentPage - 1) * subCategories.pageSize + index + 1 }}
           </TableCell>
           <TableCell>{{ item.name }}</TableCell>
           <TableCell
@@ -45,17 +45,20 @@
           </TableCell>
         </TableRow>
       </TableBody>
-      <TableBody v-if="!data?.data?.items || data.data.items.length === 0">
+      <TableBody v-if="!subCategories?.items || subCategories.items.length === 0">
         <TableRow>
           <TableCell colspan="4" class="text-center">No subcategories found</TableCell>
         </TableRow>
       </TableBody>
-      <TableCaption v-if="data?.data?.items">
-        <PaginationComponent :page-size="data.data.pageSize" :total="data.data.totalItems" />
+      <TableCaption v-if="subCategories?.items">
+        <PaginationComponent
+          :page-size="subCategories.pageSize"
+          :total="subCategories.totalItems"
+        />
       </TableCaption>
     </Table>
 
-    <EditSubCategory v-model="isEditDialogOpen" :subCategory="selectedSubCategory" />
+    <EditSubCategoryDialog v-model="isEditDialogOpen" :subCategory="selectedSubCategory" />
     <DeleteSubCategory v-model="isDeleteDialogOpen" :subCategoryId="selectedId" />
   </div>
 </template>
@@ -73,12 +76,12 @@ import {
 import { SquarePen, Trash2 } from 'lucide-vue-next'
 import { keepPreviousData, useQuery } from '@tanstack/vue-query'
 import { useRoute, useRouter } from 'vue-router'
-import { ApiResponse, editSubCategory, PaginatedResult, subCategory } from '@/types/api-response'
+import { ApiResponse, EditSubCategory, PaginatedResult, SubCategory } from '@/types/api-response'
 import SearchComponent from '@/components/SearchComponent.vue'
 import { computed, ref } from 'vue'
 import Loading from '@/components/Loading.vue'
 import CreateSubCategory from '@/components/sub-category/CreateSubCategory.vue'
-import EditSubCategory from '@/components/sub-category/EditSubCategory.vue'
+import EditSubCategoryDialog from '@/components/sub-category/EditSubCategory.vue'
 import DeleteSubCategory from '@/components/sub-category/DeleteSubCategory.vue'
 import PaginationComponent from '@/components/PaginationComponent.vue'
 
@@ -88,7 +91,7 @@ const page = computed(() => route.query.page ?? '1')
 const pageSize = computed(() => route.query.pageSize ?? '10')
 const name = computed(() => route.query.name ?? '')
 const isEditDialogOpen = ref(false)
-const selectedSubCategory = ref<editSubCategory>({
+const selectedSubCategory = ref<EditSubCategory>({
   id: '',
   name: '',
   description: '',
@@ -100,7 +103,7 @@ const selectedSubCategory = ref<editSubCategory>({
 const isDeleteDialogOpen = ref(false)
 const selectedId = ref<string>('')
 
-const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<subCategory>>>({
+const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<SubCategory>>>({
   queryFn: async () => await fetchSubCategory(),
   queryKey: computed(() => [
     'subcategories',
@@ -113,7 +116,7 @@ const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<subCategory>>>(
   placeholderData: keepPreviousData,
 })
 
-const fetchSubCategory = async (): Promise<ApiResponse<PaginatedResult<subCategory>>> => {
+const fetchSubCategory = async (): Promise<ApiResponse<PaginatedResult<SubCategory>>> => {
   const query = new URLSearchParams()
   if (name.value) query.set('name', String(name.value))
   query.set('page', String(page.value))
@@ -127,6 +130,8 @@ const fetchSubCategory = async (): Promise<ApiResponse<PaginatedResult<subCatego
   const data = await response.json()
   return data
 }
+
+const subCategories = computed(() => data.value?.data)
 
 const convertDate = (date: Date): string => {
   const dateString = new Date(date).toISOString()
@@ -142,7 +147,7 @@ const handleSearch = (searchQuery: string) => {
   })
 }
 
-function openEditSubCategory(item: editSubCategory) {
+function openEditSubCategory(item: EditSubCategory) {
   selectedSubCategory.value = item
   isEditDialogOpen.value = true
 }

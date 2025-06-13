@@ -2,31 +2,30 @@
   <Form v-slot="{ handleSubmit }" as="" :validation-schema="formSchema">
     <Dialog v-model:open="isDialogOpen">
       <DialogTrigger as-child>
-        <Button class=""> Create </Button>
+        <Button variant="outline" class=""> <ArrowDownToLine />Import </Button>
       </DialogTrigger>
       <DialogContent class="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Category</DialogTitle>
+          <DialogTitle>Import Record via CSV </DialogTitle>
         </DialogHeader>
         <div class="grid gap-4 py-4">
           <form id="dialogForm" @submit.prevent="handleSubmit($event, onSubmit)" class="grid gap-4">
-            <FormField v-slot="{ componentField }" name="name">
+            <FormField v-slot="{ handleChange }" name="file">
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>CSV file</FormLabel>
                 <FormControl>
-                  <Input type="text" placeholder="Enter category name" v-bind="componentField" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="description">
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea
-                    type="text"
-                    placeholder="Enter category description"
-                    v-bind="componentField"
+                  <Input
+                    type="file"
+                    accept=".csv"
+                    placeholder="Import an csv file"
+                    @change="
+                      (e: Event) => {
+                        const target = e.target as HTMLInputElement
+                        if (target.files) {
+                          handleChange([...target.files])
+                        }
+                      }
+                    "
                   />
                 </FormControl>
                 <FormMessage />
@@ -64,8 +63,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
+import { ArrowDownToLine } from 'lucide-vue-next'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
@@ -73,55 +72,59 @@ import Loading from '../Loading.vue'
 import { ref } from 'vue'
 import { toast } from 'vue3-toastify'
 
-interface CategoryFormValues {
-  name: string
-  description: string
+interface ImportExpenseRecordFormValues {
+  file: File[]
 }
 const isDialogOpen = ref(false)
 const queryClient = useQueryClient()
 
 const formSchema = toTypedSchema(
   z.object({
-    name: z.string().min(2).max(50),
-    description: z.string().max(200),
+    file: z
+      .array(z.instanceof(File))
+      .min(1, 'Please select a CSV file')
+      .refine(
+        (files) => files[0]?.type === 'text/csv' || files[0]?.name.endsWith('.csv'),
+        'Only CSV files are allowed',
+      ),
   }),
 )
 
-const createCategory = async (data: CategoryFormValues) => {
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category`, {
+const ImportExpenseRecord = async (data: ImportExpenseRecordFormValues) => {
+  const formData = new FormData()
+  formData.append('file', data.file[0])
+
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/expense-record/bulk`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
+    body: formData,
   })
 
   if (!res.ok) {
-    throw new Error('Failed to create category')
+    const error = await res.json()
+    throw new Error(error.msg || 'Failed to import expense records')
   }
 
   return res.json()
 }
 
 const mutation = useMutation({
-  mutationFn: createCategory,
+  mutationFn: ImportExpenseRecord,
   onSuccess: (data) => {
-    console.log('Category created:', data)
-    toast.success('Category created successfully')
+    console.log('Expense record imported:', data)
+    toast.success('Expense record imported successfully')
     isDialogOpen.value = false
-    queryClient.invalidateQueries({ queryKey: ['categories'] })
+    queryClient.invalidateQueries({ queryKey: ['expense-records'] })
   },
   onError: (error) => {
-    toast.error(error || 'Category created failed')
-    console.error('Error creating category:', error)
+    toast.error(error || 'Expense record imported failed')
+    console.error('Error importing records:', error)
   },
 })
 
-const onSubmit = (values: CategoryFormValues) => {
+const onSubmit = (values: ImportExpenseRecordFormValues) => {
   console.log('Form submitted!', values)
   mutation.mutate({
-    name: values.name,
-    description: values.description,
+    file: values.file,
   })
 }
 </script>

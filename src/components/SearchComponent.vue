@@ -1,14 +1,14 @@
 <template>
-  <div class="relative w-full max-w-sm items-center">
+  <div class="relative w-full items-center text-xs">
     <Input
       id="search"
       v-model="searchQuery"
       type="text"
       :placeholder="props.placeholder"
-      class="pl-10"
+      class="pl-10 placeholder:text-sm"
     />
     <span class="absolute start-0 inset-y-0 flex items-center justify-center px-2">
-      <Search class="size-6 text-muted-foreground" />
+      <Search class="size-5 text-muted-foreground" />
     </span>
   </div>
 </template>

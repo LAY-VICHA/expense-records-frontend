@@ -3,7 +3,7 @@
     <div class="text-3xl font-bold">Category</div>
 
     <div class="py-4 flex justify-between items-center gap-4">
-      <SearchComponent @search="handleSearch" placeholder="Search categories" />
+      <SearchComponent @search="handleSearch" placeholder="Search categories" class="max-w-sm" />
       <CreateCategory />
     </div>
 
@@ -18,10 +18,10 @@
           <TableHead class="text-right"> Action </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody v-if="data?.data?.items">
-        <TableRow v-for="(item, index) in data.data.items" :key="index">
+      <TableBody v-if="categories?.items">
+        <TableRow v-for="(item, index) in categories.items" :key="index">
           <TableCell class="font-medium">
-            {{ (data.data.currentPage - 1) * data.data.pageSize + index + 1 }}
+            {{ (categories.currentPage - 1) * categories.pageSize + index + 1 }}
           </TableCell>
           <TableCell>{{ item.name }}</TableCell>
           <TableCell
@@ -43,13 +43,13 @@
           </TableCell>
         </TableRow>
       </TableBody>
-      <TableBody v-if="!data?.data?.items || data.data.items.length === 0">
+      <TableBody v-if="!categories?.items || categories.items.length === 0">
         <TableRow>
           <TableCell colspan="4" class="text-center">No categories found</TableCell>
         </TableRow>
       </TableBody>
-      <TableCaption v-if="data?.data?.items">
-        <PaginationComponent :page-size="data.data.pageSize" :total="data.data.totalItems" />
+      <TableCaption v-if="categories?.items">
+        <PaginationComponent :page-size="categories.pageSize" :total="categories.totalItems" />
       </TableCaption>
     </Table>
 
@@ -71,7 +71,7 @@ import {
 import { SquarePen, Trash2 } from 'lucide-vue-next'
 import { keepPreviousData, useQuery } from '@tanstack/vue-query'
 import { useRoute, useRouter } from 'vue-router'
-import { ApiResponse, category, PaginatedResult } from '@/types/api-response'
+import { ApiResponse, Category, PaginatedResult } from '@/types/api-response'
 import SearchComponent from '@/components/SearchComponent.vue'
 import { computed, ref } from 'vue'
 import Loading from '@/components/Loading.vue'
@@ -100,7 +100,7 @@ interface CategoryFormValues {
   description: string
 }
 
-const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<category>>>({
+const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<Category>>>({
   queryFn: async () => await fetchCategory(),
   queryKey: computed(() => [
     'categories',
@@ -113,7 +113,7 @@ const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<category>>>({
   placeholderData: keepPreviousData,
 })
 
-const fetchCategory = async (): Promise<ApiResponse<PaginatedResult<category>>> => {
+const fetchCategory = async (): Promise<ApiResponse<PaginatedResult<Category>>> => {
   const query = new URLSearchParams()
   if (name.value) query.set('name', String(name.value))
   query.set('page', String(page.value))
@@ -127,6 +127,8 @@ const fetchCategory = async (): Promise<ApiResponse<PaginatedResult<category>>> 
   const data = await response.json()
   return data
 }
+
+const categories = computed(() => data.value?.data)
 
 const convertDate = (date: Date): string => {
   const dateString = new Date(date).toISOString()
