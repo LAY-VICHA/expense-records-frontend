@@ -20,7 +20,7 @@
                 <FormLabel>Category</FormLabel>
 
                 <Select v-bind="componentField" class="w-[300px]">
-                  <FormControl class="w-full">
+                  <FormControl class="w-full cursor-pointer">
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -31,6 +31,7 @@
                         v-for="category in allCategories"
                         :key="category.id"
                         :value="category.id"
+                        class="cursor-pointer"
                       >
                         {{ category.name }}
                       </SelectItem>
@@ -61,7 +62,12 @@
           </form>
         </div>
         <DialogFooter>
-          <Button type="submit" form="editForm" :disabled="mutation.isPending.value">
+          <Button
+            type="submit"
+            form="editForm"
+            :disabled="mutation.isPending.value"
+            class="cursor-pointer"
+          >
             <Loading v-if="mutation.isPending.value" />
             Save Changes
           </Button>
@@ -99,13 +105,15 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { keepPreviousData, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { toast } from 'vue3-toastify'
 import Loading from '../Loading.vue'
 import { useRoute } from 'vue-router'
 import { AllCategories, ApiResponse, EditSubCategory } from '@/types/api-response'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
@@ -143,16 +151,16 @@ const formSchema = toTypedSchema(
 )
 
 const fetchAllCategory = async (): Promise<ApiResponse<AllCategories>> => {
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category/all`)
+  const response = await apiFetch<ApiResponse<AllCategories>>(`/category/all`)
 
-  if (!response.ok) throw new Error('Cannot get data')
+  if (response.error) {
+    throw new Error(response.error.message || 'Failed to fetch categories')
+  }
 
-  const data = await response.json()
-
-  return data
+  return response.value
 }
 
-const { data } = useQuery<ApiResponse<AllCategories>>({
+const { data } = useNoRetryQuery<ApiResponse<AllCategories>>({
   queryFn: async () => await fetchAllCategory(),
   queryKey: ['all-categories'],
   placeholderData: keepPreviousData,
@@ -162,21 +170,19 @@ const allCategories = computed(() => data.value?.data)
 
 const mutation = useMutation({
   mutationFn: async (data: editedSubCategory) => {
-    const res = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/sub-category/${props.subCategory.id}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+    const response = await apiFetch(`/sub-category/${props.subCategory.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(data),
+    })
 
-    if (!res.ok) {
-      throw new Error('Failed to update subcategory')
+    if (response.error) {
+      throw new Error(response.error.message || 'Failed to update subcategory')
     }
-    return res.json()
+
+    return response.value
   },
   onSuccess: () => {
     toast.success('Subcategory updated successfully')
@@ -193,8 +199,7 @@ const mutation = useMutation({
     })
   },
   onError: (error) => {
-    console.log(error)
-    toast.error(error instanceof Error ? error.message : 'Update failed')
+    toast.error(error.message || 'Update failed')
   },
 })
 

@@ -7,57 +7,81 @@
     </div>
 
     <div v-if="isLoading" class="w-full flex justify-center pt-4"><Loading /></div>
-    <Table v-if="!isLoading">
-      <TableHeader>
-        <TableRow>
-          <TableHead class="w-[100px]"> No. </TableHead>
-          <TableHead>Expense Date</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Sub Category</TableHead>
-          <TableHead class="w-50 md:w-75 2xl:w-120">Reason</TableHead>
-          <TableHead>Amount</TableHead>
-          <TableHead>Currency</TableHead>
-          <TableHead class="text-right"> Action </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody v-if="expenseRecord?.items">
-        <TableRow v-for="(item, index) in expenseRecord.items" :key="index">
-          <TableCell class="font-medium">
-            {{ (expenseRecord.currentPage - 1) * expenseRecord.pageSize + index + 1 }}
-          </TableCell>
-          <TableCell>{{ convertDate(item.expenseDate) }}</TableCell>
-          <TableCell>{{ item.category }}</TableCell>
-          <TableCell>{{ item.subCategory }}</TableCell>
-          <TableCell
-            class="truncate max-w-50 md:max-w-75 2xl:max-w-120 whitespace-nowrap overflow-hidden"
-            >{{ item.reason }}</TableCell
-          >
-          <TableCell>{{ item.amount }}</TableCell>
-          <TableCell>{{ item.currency }}</TableCell>
-          <TableCell class="text-right flex justify-end gap-2.5 items-center">
-            <SquarePen
-              @click="openEditExpenseRecord(item)"
-              class="size-4 cursor-pointer hover:text-secondary"
-            />
-            <Trash2
-              @click="openDeleteExpenseRecord(item.id)"
-              class="size-4 cursor-pointer hover:text-destructive"
-            />
-          </TableCell>
-        </TableRow>
-      </TableBody>
-      <TableBody v-if="!expenseRecord?.items || expenseRecord.items.length === 0">
-        <TableRow>
-          <TableCell colspan="8" class="text-center">No expense records found</TableCell>
-        </TableRow>
-      </TableBody>
-      <TableCaption v-if="expenseRecord?.items">
-        <PaginationComponent
-          :page-size="expenseRecord.pageSize"
-          :total="expenseRecord.totalItems"
-        />
-      </TableCaption>
-    </Table>
+    <Transition appear name="slide-fade">
+      <Table v-if="!isLoading">
+        <TableHeader>
+          <TableRow>
+            <TableHead class="w-[100px]"> No. </TableHead>
+            <TableHead>Expense Date</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Sub Category</TableHead>
+            <TableHead class="w-50 md:w-75 2xl:w-120">Reason</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Spent In</TableHead>
+            <TableHead class="text-right"> Action </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody v-if="expenseRecord?.items">
+          <TableRow v-for="(item, index) in expenseRecord.items" :key="index">
+            <TableCell class="font-medium">
+              {{ (expenseRecord.currentPage - 1) * expenseRecord.pageSize + index + 1 }}
+            </TableCell>
+            <TableCell>{{ convertDate(item.expenseDate) }}</TableCell>
+            <TableCell>{{ item.category }}</TableCell>
+            <TableCell>{{ item.subCategory }}</TableCell>
+            <TableCell
+              class="truncate max-w-50 md:max-w-75 2xl:max-w-120 whitespace-nowrap overflow-hidden"
+              >{{ item.reason }}</TableCell
+            >
+            <TableCell>
+              <span v-if="Number(item.amount) < 5" class="text-green-600 font-medium">{{
+                item.amount
+              }}</span>
+              <span
+                v-if="Number(item.amount) < 50 && Number(item.amount) >= 5"
+                class="text-yellow-600 font-medium"
+                >{{ item.amount }}</span
+              >
+              <span v-if="Number(item.amount) >= 50" class="text-red-600 font-medium">{{
+                item.amount
+              }}</span>
+            </TableCell>
+            <TableCell v-if="item.currency === 'USD'">
+              <span class="font-medium text-green-700 bg-green-100 rounded-md py-0.75 px-2.5">{{
+                item.currency
+              }}</span>
+            </TableCell>
+            <TableCell v-else>
+              <span class="font-medium text-yellow-700 bg-yellow-100 rounded-md py-0.75 px-2.5">
+                {{ item.currency }}
+              </span>
+            </TableCell>
+            <TableCell class="text-right flex justify-end gap-2.5 items-center">
+              <SquarePen
+                @click="openEditExpenseRecord(item)"
+                class="size-4 cursor-pointer hover:text-secondary"
+              />
+              <Trash2
+                @click="openDeleteExpenseRecord(item.id)"
+                class="size-4 cursor-pointer hover:text-destructive"
+              />
+            </TableCell>
+          </TableRow>
+        </TableBody>
+        <TableBody v-if="!expenseRecord?.items || expenseRecord.items.length === 0">
+          <TableRow>
+            <TableCell colspan="8" class="text-center">No expense records found</TableCell>
+          </TableRow>
+        </TableBody>
+        <TableCaption v-if="expenseRecord?.items">
+          <PaginationComponent
+            :page-size="expenseRecord.pageSize"
+            :total="expenseRecord.totalItems"
+            :total-page="expenseRecord.totalPages"
+          />
+        </TableCaption>
+      </Table>
+    </Transition>
 
     <EditExpenseRecord v-model="isEditDialogOpen" :expenseRecord="selectedExpenseRecord" />
     <DeleteExpenseRecord v-model="isDeleteDialogOpen" :expenseRecordId="selectedId" />
@@ -75,7 +99,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { SquarePen, Trash2 } from 'lucide-vue-next'
-import { keepPreviousData, useQuery } from '@tanstack/vue-query'
+import { keepPreviousData } from '@tanstack/vue-query'
 import { useRoute } from 'vue-router'
 import {
   ApiResponse,
@@ -89,6 +113,8 @@ import QueryTools from '@/components/expense-record/QueryTools.vue'
 import EditExpenseRecord from '@/components/expense-record/EditExpenseRecord.vue'
 import DeleteExpenseRecord from '@/components/expense-record/DeleteExpenseRecord.vue'
 import PaginationComponent from '@/components/PaginationComponent.vue'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 
@@ -108,12 +134,14 @@ const selectedExpenseRecord = ref<EditExpenseReocrd>({
   currency: '',
   reason: '',
   category: '',
+  categoryId: '',
   subCategory: '',
+  subCategoryId: '',
 })
 const isDeleteDialogOpen = ref(false)
 const selectedId = ref<string>('')
 
-const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<ExpenseRecord>>>({
+const { data, isLoading } = useNoRetryQuery<ApiResponse<PaginatedResult<ExpenseRecord>>>({
   queryFn: async () => await fetchExpenseRecord(),
   queryKey: computed(() => [
     'expense-records',
@@ -140,15 +168,17 @@ const fetchExpenseRecord = async (): Promise<ApiResponse<PaginatedResult<Expense
   if (filterStartDate.value) query.set('filterStartDate', String(filterStartDate.value))
   if (filterEndDate.value) query.set('filterEndDate', String(filterEndDate.value))
   query.set('page', String(page.value))
-  query.set('pageSize', String(pageSize.value))
-  console.log(query)
+  query.set('pageSize', String(pageSize.value))(query)
 
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/expense-record?${query}`)
+  const response = await apiFetch<ApiResponse<PaginatedResult<ExpenseRecord>>>(
+    `/expense-record?${query}`,
+  )
 
-  if (!response.ok) throw new Error('Cannot get data')
+  if (response.error) {
+    throw new Error(response.error.message)
+  }
 
-  const data = await response.json()
-  return data
+  return response.value
 }
 
 const expenseRecord = computed(() => data.value?.data)
@@ -159,14 +189,11 @@ const convertDate = (date: Date): string => {
 }
 
 function openEditExpenseRecord(item: EditExpenseReocrd) {
-  console.log('open edit expense record', item)
-
   selectedExpenseRecord.value = item
   isEditDialogOpen.value = true
 }
 
 function openDeleteExpenseRecord(id: string) {
-  console.log(id)
   selectedId.value = id
   isDeleteDialogOpen.value = true
 }

@@ -13,16 +13,17 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@justmiracle/result": "^1.2.0",
     "@tanstack/vue-query": "^5.77.2",
     "@tanstack/vue-table": "^8.21.3",
     "@vee-validate/zod": "^4.15.0",
-    "@vueuse/core": "^13.3.0",
+    "@vueuse/core": "^13.6.0",
     "chart.js": "^4.4.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-vue-next": "^0.511.0",
     "pinia": "^3.0.1",
-    "reka-ui": "^2.3.1",
+    "reka-ui": "^2.4.0",
     "tailwind-merge": "^3.3.0",
     "tw-animate-css": "^1.3.0",
     "vee-validate": "^4.15.0",
@@ -30,7 +31,7 @@
     "vue-chartjs": "^5.3.2",
     "vue-echart": "^1.0.5",
     "vue-router": "^4.5.0",
-    "vue-sonner": "^2.0.0",
+    "vue-sonner": "^2.0.1",
     "vue3-toastify": "^0.2.8",
     "zod": "^3.25.32"
   },

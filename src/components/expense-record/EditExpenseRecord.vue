@@ -10,8 +10,8 @@
         :validation-schema="formSchema"
         :initial-values="{
           expenseDate: expenseDateValue,
-          category: props.expenseRecord?.category || '',
-          subCategory: props.expenseRecord?.subCategory || '',
+          categoryId: props.expenseRecord?.categoryId || '',
+          subCategoryId: props.expenseRecord?.subCategoryId || '',
           amount: props.expenseRecord?.amount || '',
           currency: props.expenseRecord?.currency || 'USD',
           reason: props.expenseRecord?.reason || '',
@@ -32,7 +32,7 @@
                       variant="outline"
                       :class="
                         cn(
-                          'w-full justify-start text-left font-normal',
+                          'w-full justify-start text-left font-normal cursor-pointer',
                           !expenseDateValue && 'text-muted-foreground',
                         )
                       "
@@ -58,7 +58,7 @@
                 <FormMessage />
               </FormItem>
             </FormField>
-            <FormField v-slot="{ componentField }" name="category">
+            <FormField v-slot="{ componentField }" name="categoryId">
               <FormItem>
                 <FormLabel>Category</FormLabel>
 
@@ -67,7 +67,7 @@
                   @update:modelValue="selectedCategory = String($event)"
                   class="w-[300px]"
                 >
-                  <FormControl class="w-full">
+                  <FormControl class="w-full cursor-pointer">
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -77,7 +77,8 @@
                       <SelectItem
                         v-for="category in allCategories"
                         :key="category.id"
-                        :value="category.name"
+                        :value="category.id"
+                        class="cursor-pointer"
                       >
                         {{ category.name }}
                       </SelectItem>
@@ -87,12 +88,12 @@
                 <FormMessage />
               </FormItem>
             </FormField>
-            <FormField v-slot="{ componentField }" name="subCategory">
+            <FormField v-slot="{ componentField }" name="subCategoryId">
               <FormItem>
                 <FormLabel>Sub Category</FormLabel>
 
                 <Select v-bind="componentField" class="w-[300px]">
-                  <FormControl class="w-full">
+                  <FormControl class="w-full cursor-pointer" aria-label="Select button">
                     <SelectTrigger>
                       <SelectValue placeholder="Select a sub category" />
                     </SelectTrigger>
@@ -102,14 +103,15 @@
                       <div
                         v-if="
                           category.subCategories.length > 0 &&
-                          selectedCategory.valueOf() === category.name
+                          selectedCategory.valueOf() === category.id
                         "
                       >
                         <SelectLabel>{{ category.name }}</SelectLabel>
                         <SelectItem
                           v-for="subCategory in category.subCategories"
                           :key="subCategory.id"
-                          :value="subCategory.name"
+                          :value="subCategory.id"
+                          class="cursor-pointer"
                         >
                           {{ subCategory.name }}
                         </SelectItem>
@@ -202,7 +204,13 @@
       </Form>
 
       <DialogFooter>
-        <Button type="submit" form="editDialogForm" :disabled="mutation.isPending.value">
+        <Button
+          type="submit"
+          form="editDialogForm"
+          :disabled="mutation.isPending.value"
+          class="cursor-pointer"
+          aria-label="Submit button"
+        >
           <Loading v-if="mutation.isPending.value" />
           Submit
         </Button>
@@ -242,7 +250,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { keepPreviousData, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { CalendarIcon } from 'lucide-vue-next'
@@ -258,6 +266,8 @@ import {
   today,
 } from '@internationalized/date'
 import { cn } from '@/lib/utils'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
@@ -275,8 +285,8 @@ interface EditExpenseReocrdWithDateString {
   amount: string
   currency: string
   reason: string | null
-  category: string
-  subCategory: string | null
+  categoryId: string
+  subCategoryId: string | null
 }
 
 const props = defineProps<{
@@ -284,9 +294,9 @@ const props = defineProps<{
   expenseRecord: EditExpenseReocrd
 }>()
 
-const selectedCategory = ref<string>(props.expenseRecord.category)
+const selectedCategory = ref<string>(props.expenseRecord.categoryId)
 watch(
-  () => props.expenseRecord.category,
+  () => props.expenseRecord.categoryId,
   (newCategory) => {
     selectedCategory.value = newCategory
   },
@@ -331,8 +341,8 @@ const formSchema = toTypedSchema(
       month: z.number(),
       year: z.number(),
     }),
-    category: z.string().min(1, 'Category is required'),
-    subCategory: z.string().optional(),
+    categoryId: z.string().min(1, 'Category is required'),
+    subCategoryId: z.string().optional(),
     amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
     currency: z.string().refine((v) => ['USD', 'KHR'].includes(v), {
       message: 'Currency must be either USD or KHR.',
@@ -346,16 +356,16 @@ const df = new DateFormatter('en-US', {
 })
 
 const fetchAllCategory = async (): Promise<ApiResponse<AllCategories>> => {
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category/all`)
+  const response = await apiFetch<ApiResponse<AllCategories>>(`/category/all`)
 
-  if (!response.ok) throw new Error('Cannot get data')
+  if (response.error) {
+    throw new Error(response.error.message || 'Failed to fetch categories')
+  }
 
-  const data = await response.json()
-
-  return data
+  return response.value
 }
 
-const { data } = useQuery<ApiResponse<AllCategories>>({
+const { data } = useNoRetryQuery<ApiResponse<AllCategories>>({
   queryFn: async () => await fetchAllCategory(),
   queryKey: ['all-categories'],
   placeholderData: keepPreviousData,
@@ -365,21 +375,19 @@ const allCategories = computed(() => data.value?.data)
 
 const mutation = useMutation({
   mutationFn: async (data: EditExpenseReocrdWithDateString) => {
-    const res = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/expense-record/${props.expenseRecord.id}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+    const response = await apiFetch(`/expense-record/${props.expenseRecord.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify(data),
+    })
 
-    if (!res.ok) {
-      throw new Error('Failed to update expense record')
+    if (response.error) {
+      throw new Error(response.error.message || 'Failed to update expense record')
     }
-    return res.json()
+
+    return response.value
   },
   onSuccess: () => {
     toast.success('Expense record updated successfully')
@@ -401,8 +409,7 @@ const mutation = useMutation({
     })
   },
   onError: (error) => {
-    console.log(error)
-    toast.error(error instanceof Error ? error.message : 'Update failed')
+    toast.error(error.message || 'Update failed')
   },
 })
 
@@ -412,7 +419,6 @@ const onSubmit = (values: EditExpenseReocrdWithDateString) => {
     const formattedDate = date.toLocaleDateString('sv-SE')
     values.expenseDate = formattedDate
   }
-  console.log('Form submitted!', values)
   mutation.mutate(values)
 }
 </script>

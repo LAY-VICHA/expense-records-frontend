@@ -1,23 +1,32 @@
 <template>
   <div class="p-8">
-    <h1 class="text-3xl font-bold">Dashboard</h1>
-    <section v-if="!cardLoading" class="grid grid-cols-1 gap-4 mt-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2 text-gray-600">
+    <h2 class="text-3xl font-bold">Dashboard</h2>
+    <section
+      v-if="!cardLoading"
+      class="grid grid-cols-1 gap-4 mt-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
+      <Card class="flex flex-col justify-between">
+        <CardHeader
+          class="flex flex-cols items-center justify-between space-y-0 pb-2 text-gray-600"
+        >
           <CardTitle>Total Expense</CardTitle>
           <CircleDollarSign />
         </CardHeader>
         <CardContent class="text-2xl font-bold">{{ cardData?.totalExpense }} USD</CardContent>
       </Card>
-      <Card>
-        <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2 text-gray-600">
+      <Card class="flex flex-col justify-between">
+        <CardHeader
+          class="flex flex-cols items-center justify-between space-y-0 pb-2 text-gray-600"
+        >
           <CardTitle>Total Record Day</CardTitle>
           <CalendarDays />
         </CardHeader>
         <CardContent class="text-2xl font-bold">{{ cardData?.totalDays }} Days</CardContent>
       </Card>
-      <Card>
-        <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2 text-gray-600">
+      <Card class="flex flex-col justify-between">
+        <CardHeader
+          class="flex flex-cols items-center justify-between space-y-0 pb-2 text-gray-600"
+        >
           <CardTitle>Average Expense/Day</CardTitle>
           <ChartSpline />
         </CardHeader>
@@ -31,13 +40,13 @@
       </div>
       <div
         v-if="!isLoading && !pieChartloading"
-        class="w-full h-full grid grid-cols-1 lg:grid-cols-7 gap-y-5"
+        class="w-full h-full grid grid-cols-1 xl:grid-cols-7 gap-y-5"
       >
-        <div class="lg:col-span-4">
+        <div class="xl:col-span-4">
           <BarChart v-if="barChartData" :barChartData="barChartData" :periodType="periodType" />
           <BarChart v-else :barChartData="barChartWithoutData" :periodType="periodType" />
         </div>
-        <div class="lg:col-span-3 lg:pl-6">
+        <div class="xl:col-span-3 xl:pl-6">
           <PieChart
             v-if="pieChartData"
             :pieChartData="pieChartData"
@@ -66,6 +75,8 @@ import {
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Loading from '@/components/Loading.vue'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const selectedCategory = computed(() => route.query.selectedCategory ?? '')
@@ -89,15 +100,16 @@ const { data: cardDataResponse, isLoading: cardLoading } = useQuery<ApiResponse<
 const cardData = computed(() => cardDataResponse.value?.data)
 
 const fetchCardData = async (): Promise<ApiResponse<CardDataResponse>> => {
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dashboard`)
+  const response = await apiFetch<ApiResponse<CardDataResponse>>(`/dashboard`)
 
-  if (!response.ok) throw new Error('Cannot get data')
+  if (response.error) {
+    throw new Error(response.error.message || 'Failed to fetch card data')
+  }
 
-  const data = await response.json()
-  return data
+  return response.value
 }
 
-const { data: barChartDataResponse, isLoading } = useQuery<ApiResponse<BarChartResponse>>({
+const { data: barChartDataResponse, isLoading } = useNoRetryQuery<ApiResponse<BarChartResponse>>({
   queryFn: async () => await fetchBarChartData(),
   queryKey: computed(() => [
     'bar-chart',
@@ -127,19 +139,16 @@ const fetchBarChartData = async (): Promise<ApiResponse<BarChartResponse>> => {
   if (isIncludeHighExpenseRecord.value)
     query.set('isIncludeHighExpenseRecord', String(isIncludeHighExpenseRecord.value))
 
-  console.log(query)
+  const response = await apiFetch<ApiResponse<BarChartResponse>>(`/dashboard/bar-chart?${query}`)
 
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dashboard/bar-chart?${query}`)
+  if (response.error) {
+    throw new Error(response.error.message || 'Failed to fetch bar chart data')
+  }
 
-  if (!response.ok) throw new Error('Cannot get data')
-
-  const data = await response.json()
-  return data
+  return response.value
 }
 
-// ------------------------------------------------------------------------
-
-const { data: pieChartDataResponse, isLoading: pieChartloading } = useQuery<
+const { data: pieChartDataResponse, isLoading: pieChartloading } = useNoRetryQuery<
   ApiResponse<PieChartResponse>
 >({
   queryFn: async () => await fetchPieChartData(),
@@ -172,13 +181,12 @@ const fetchPieChartData = async (): Promise<ApiResponse<PieChartResponse>> => {
       String(isIncludeHighExpenseRecordPieChart.value),
     )
 
-  console.log(query)
+  const response = await apiFetch<ApiResponse<PieChartResponse>>(`/dashboard/pie-chart?${query}`)
 
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dashboard/pie-chart?${query}`)
+  if (response.error) {
+    throw new Error(response.error.message)
+  }
 
-  if (!response.ok) throw new Error('Cannot get data')
-
-  const data = await response.json()
-  return data
+  return response.value
 }
 </script>

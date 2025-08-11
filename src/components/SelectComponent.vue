@@ -1,11 +1,16 @@
 <template>
   <Select v-model="selectedOption">
-    <SelectTrigger class="w-full">
+    <SelectTrigger class="w-full cursor-pointer" aria-label="Select button">
       <SelectValue :placeholder="placeholder" />
     </SelectTrigger>
     <SelectContent>
       <SelectGroup>
-        <SelectItem v-for="option in props.selectOptions" :key="option.value" :value="option.value">
+        <SelectItem
+          v-for="option in props.selectOptions"
+          :key="option.value"
+          :value="option.value"
+          class="cursor-pointer"
+        >
           {{ option.label }}
         </SelectItem>
       </SelectGroup>

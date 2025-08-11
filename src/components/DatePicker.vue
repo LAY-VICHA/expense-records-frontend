@@ -3,7 +3,12 @@
     <PopoverTrigger as-child>
       <Button
         variant="outline"
-        :class="cn('w-full justify-start text-left font-normal', !value && 'text-muted-foreground')"
+        :class="
+          cn(
+            'w-full justify-start text-left font-normal cursor-pointer',
+            !value && 'text-muted-foreground',
+          )
+        "
       >
         <Calendar class="mr-2 h-4 w-4" />
         <template v-if="value.start">

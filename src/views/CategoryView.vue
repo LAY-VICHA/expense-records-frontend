@@ -8,50 +8,56 @@
     </div>
 
     <div v-if="isLoading" class="w-full flex justify-center pt-4"><Loading /></div>
-    <Table v-if="!isLoading">
-      <TableHeader>
-        <TableRow>
-          <TableHead class="w-[100px]"> No. </TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead class="w-50 md:w-75 2xl:w-120">Description</TableHead>
-          <TableHead>Created At</TableHead>
-          <TableHead class="text-right"> Action </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody v-if="categories?.items">
-        <TableRow v-for="(item, index) in categories.items" :key="index">
-          <TableCell class="font-medium">
-            {{ (categories.currentPage - 1) * categories.pageSize + index + 1 }}
-          </TableCell>
-          <TableCell>{{ item.name }}</TableCell>
-          <TableCell
-            class="truncate max-w-50 md:max-w-75 2xl:max-w-120 whitespace-nowrap overflow-hidden"
-            >{{ item.description }}</TableCell
-          >
-          <TableCell class="">
-            {{ convertDate(item.createdAt) }}
-          </TableCell>
-          <TableCell class="text-right flex justify-end gap-2.5 items-center">
-            <SquarePen
-              @click="openEditCategory(item)"
-              class="size-4 cursor-pointer hover:text-secondary"
-            />
-            <Trash2
-              @click="openDeleteCategory(item.id)"
-              class="size-4 cursor-pointer hover:text-destructive"
-            />
-          </TableCell>
-        </TableRow>
-      </TableBody>
-      <TableBody v-if="!categories?.items || categories.items.length === 0">
-        <TableRow>
-          <TableCell colspan="4" class="text-center">No categories found</TableCell>
-        </TableRow>
-      </TableBody>
-      <TableCaption v-if="categories?.items">
-        <PaginationComponent :page-size="categories.pageSize" :total="categories.totalItems" />
-      </TableCaption>
-    </Table>
+    <Transition appear name="slide-fade">
+      <Table v-if="!isLoading">
+        <TableHeader>
+          <TableRow>
+            <TableHead class="w-[100px]"> No. </TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead class="w-50 md:w-75 2xl:w-120">Description</TableHead>
+            <TableHead>Created At</TableHead>
+            <TableHead class="text-right"> Action </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody v-if="categories?.items">
+          <TableRow v-for="(item, index) in categories.items" :key="index">
+            <TableCell class="font-medium">
+              {{ (categories.currentPage - 1) * categories.pageSize + index + 1 }}
+            </TableCell>
+            <TableCell>{{ item.name }}</TableCell>
+            <TableCell
+              class="truncate max-w-50 md:max-w-75 2xl:max-w-120 whitespace-nowrap overflow-hidden"
+              >{{ item.description }}</TableCell
+            >
+            <TableCell class="">
+              {{ convertDate(item.createdAt) }}
+            </TableCell>
+            <TableCell class="text-right flex justify-end gap-2.5 items-center">
+              <SquarePen
+                @click="openEditCategory(item)"
+                class="size-4 cursor-pointer hover:text-secondary"
+              />
+              <Trash2
+                @click="openDeleteCategory(item.id)"
+                class="size-4 cursor-pointer hover:text-destructive"
+              />
+            </TableCell>
+          </TableRow>
+        </TableBody>
+        <TableBody v-if="!categories?.items || categories.items.length === 0">
+          <TableRow>
+            <TableCell colspan="4" class="text-center">No categories found</TableCell>
+          </TableRow>
+        </TableBody>
+        <TableCaption v-if="categories?.items">
+          <PaginationComponent
+            :page-size="categories.pageSize"
+            :total="categories.totalItems"
+            :total-page="categories.totalPages"
+          />
+        </TableCaption>
+      </Table>
+    </Transition>
 
     <EditCategory v-model="isEditDialogOpen" :category="selectedCategory" />
     <DeleteCategory v-model="isDeleteDialogOpen" :categoryId="selectedId" />
@@ -69,7 +75,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { SquarePen, Trash2 } from 'lucide-vue-next'
-import { keepPreviousData, useQuery } from '@tanstack/vue-query'
+import { keepPreviousData } from '@tanstack/vue-query'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiResponse, Category, PaginatedResult } from '@/types/api-response'
 import SearchComponent from '@/components/SearchComponent.vue'
@@ -79,6 +85,8 @@ import CreateCategory from '@/components/category/CreateCategory.vue'
 import EditCategory from '@/components/category/EditCategory.vue'
 import DeleteCategory from '@/components/category/DeleteCategory.vue'
 import PaginationComponent from '@/components/PaginationComponent.vue'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,7 +108,7 @@ interface CategoryFormValues {
   description: string
 }
 
-const { data, isLoading } = useQuery<ApiResponse<PaginatedResult<Category>>>({
+const { data, isLoading } = useNoRetryQuery<ApiResponse<PaginatedResult<Category>>>({
   queryFn: async () => await fetchCategory(),
   queryKey: computed(() => [
     'categories',
@@ -118,14 +126,14 @@ const fetchCategory = async (): Promise<ApiResponse<PaginatedResult<Category>>> 
   if (name.value) query.set('name', String(name.value))
   query.set('page', String(page.value))
   query.set('pageSize', String(pageSize.value))
-  console.log(query)
 
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category?${query}`)
+  const response = await apiFetch<ApiResponse<PaginatedResult<Category>>>(`/category?${query}`)
 
-  if (!response.ok) throw new Error('Cannot get data')
+  if (response.error) {
+    throw new Error(response.error.message)
+  }
 
-  const data = await response.json()
-  return data
+  return response.value
 }
 
 const categories = computed(() => data.value?.data)
@@ -136,7 +144,6 @@ const convertDate = (date: Date): string => {
 }
 
 const handleSearch = (searchQuery: string) => {
-  console.log('Search query:', searchQuery)
   router.replace({
     query: {
       name: searchQuery || '',
@@ -150,7 +157,6 @@ function openEditCategory(item: CategoryFormValues) {
 }
 
 function openDeleteCategory(id: string) {
-  console.log(id)
   selectedId.value = id
   isDeleteDialogOpen.value = true
 }

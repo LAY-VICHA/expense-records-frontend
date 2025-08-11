@@ -9,7 +9,7 @@
       />
 
       <Select v-model="selectedSubCategory">
-        <SelectTrigger class="w-full">
+        <SelectTrigger class="w-full cursor-pointer" aria-label="Select button">
           <SelectValue placeholder="Select a subcategory" />
         </SelectTrigger>
         <SelectContent v-if="data?.data">
@@ -17,14 +17,16 @@
             <div
               v-if="
                 category.subCategories.length > 0 &&
-                (selectedCategory.valueOf() === '' || selectedCategory.valueOf() === category.name)
+                (selectedCategoryValue.valueOf() === '' ||
+                  selectedCategoryValue.valueOf() === category.id)
               "
             >
               <SelectLabel>{{ category.name }}</SelectLabel>
               <SelectItem
                 v-for="subCategory in category.subCategories"
                 :key="subCategory.id"
-                :value="subCategory.name"
+                :value="subCategory.id"
+                class="cursor-pointer"
               >
                 {{ subCategory.name }}
               </SelectItem>
@@ -64,15 +66,15 @@
       </div>
 
       <div class="flex items-center justify-center space-x-2">
-        <Switch id="include-high-expense" v-model="isIncludeHighExepense" class="" />
-        <Label for="include-high-expense" class="text-sm">High Expense</Label>
+        <Switch id="include-high-expense" v-model="isIncludeHighExepense" class="cursor-pointer" />
+        <Label for="include-high-expense" class="text-sm cursor-pointer">High Expense</Label>
       </div>
     </div>
 
     <div class="w-full flex justify-end pt-4">
       <Button
         variant="destructive"
-        class="px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+        class="px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition cursor-pointer"
         @click="handleReset"
       >
         Reset Filters
@@ -95,21 +97,22 @@ import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import SelectComponent from '@/components/SelectComponent.vue'
 import { AllCategories, ApiResponse } from '@/types/api-response'
-import { keepPreviousData, useQuery } from '@tanstack/vue-query'
+import { keepPreviousData } from '@tanstack/vue-query'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const router = useRouter()
-const selectedCategory = ref<string>('')
+const selectedCategoryValue = ref<string>('')
 const selectedSubCategory = ref<string>('')
 const periodType = ref<string>(route.query.periodType === 'yearly' ? 'yearly' : 'monthly')
 const isIncludeHighExepense = ref<boolean>(false)
 const resetCategoryKey = ref(0)
 
 const handleSelectedCategory = (category: string) => {
-  console.log('Selected category:', category)
-  selectedCategory.value = category
+  selectedCategoryValue.value = category
   router.replace({
     query: {
       ...route.query,
@@ -124,7 +127,6 @@ watch(selectedSubCategory, (newValue) => {
 })
 
 const handleSelectedSubCategory = (subCategory: string) => {
-  console.log('Selected subcategory:', subCategory)
   router.replace({
     query: {
       ...route.query,
@@ -138,7 +140,6 @@ watch(isIncludeHighExepense, (newValue) => {
 })
 
 const handleIncludeHighExpense = (isIncludeHighExepense: boolean) => {
-  console.log('Is include high expense:', isIncludeHighExepense)
   router.replace({
     query: {
       ...route.query,
@@ -152,7 +153,6 @@ watch(periodType, (newValue) => {
 })
 
 const handleSelectedPeriodType = (periodType: string) => {
-  console.log('Selected period type:', periodType)
   router.replace({
     query: {
       ...route.query,
@@ -161,7 +161,7 @@ const handleSelectedPeriodType = (periodType: string) => {
   })
 }
 
-const { data } = useQuery<ApiResponse<AllCategories>>({
+const { data } = useNoRetryQuery<ApiResponse<AllCategories>>({
   queryFn: async () => await fetchCategory(),
   queryKey: ['all-categories'],
   placeholderData: keepPreviousData,
@@ -171,25 +171,35 @@ const categoryOptions = computed(() =>
   data.value?.data
     ? data.value.data.map((category) => ({
         label: category.name,
-        value: category.name,
+        value: category.id,
       }))
     : [],
 )
 
 const fetchCategory = async (): Promise<ApiResponse<AllCategories>> => {
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category/all`)
+  const response = await apiFetch<ApiResponse<AllCategories>>(`/category/all`)
 
-  if (!response.ok) throw new Error('Cannot get data')
+  if (response.error) {
+    throw new Error(response.error.message)
+  }
 
-  const data = await response.json()
-  return data
+  return response.value
 }
 
 const handleReset = () => {
   resetCategoryKey.value++
-  selectedCategory.value = ''
+  selectedCategoryValue.value = ''
   selectedSubCategory.value = ''
   periodType.value = 'monthly'
   isIncludeHighExepense.value = false
+  router.replace({
+    query: {
+      ...route.query,
+      selectedCategory: '',
+      selectedSubCategory: '',
+      periodType: 'monthly',
+      isIncludeHighExpenseRecord: 'false',
+    },
+  })
 }
 </script>

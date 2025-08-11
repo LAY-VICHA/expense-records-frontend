@@ -9,9 +9,9 @@
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogCancel class="cursor-pointer">Cancel</AlertDialogCancel>
         <AlertDialogAction
-          class="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+          class="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full cursor-pointer sm:w-auto"
           @click="deleteExpenseRecord(props.expenseRecordId)"
           :disabled="mutation.isPending.value"
         >
@@ -38,6 +38,7 @@ import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue3-toastify'
+import { apiFetch } from '@/lib/api'
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
 const pageSize = computed(() => route.query.pageSize ?? '10')
@@ -66,20 +67,18 @@ const queryClient = useQueryClient()
 
 const mutation = useMutation({
   mutationFn: async (expenseRecordId: string) => {
-    const res = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/expense-record/${expenseRecordId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+    const response = await apiFetch(`/expense-record/${expenseRecordId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+    })
 
-    if (!res.ok) {
-      throw new Error('Failed to Delete expense record')
+    if (response.error) {
+      throw new Error(response.error.message || 'Failed to delete expense record')
     }
-    return res.json()
+
+    return response.value
   },
   onSuccess: async () => {
     toast.success('Expense record deleted successfully')
@@ -101,8 +100,7 @@ const mutation = useMutation({
     })
   },
   onError: (error) => {
-    console.log(error)
-    toast.error(error instanceof Error ? error.message : 'Delete failed')
+    toast.error(error.message || 'Delete failed')
   },
 })
 

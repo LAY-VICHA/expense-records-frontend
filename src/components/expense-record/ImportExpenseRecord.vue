@@ -2,7 +2,9 @@
   <Form v-slot="{ handleSubmit }" as="" :validation-schema="formSchema">
     <Dialog v-model:open="isDialogOpen">
       <DialogTrigger as-child>
-        <Button variant="outline" class=""> <ArrowDownToLine />Import </Button>
+        <Button variant="outline" class="cursor-pointer" aria-label="Import button">
+          <ArrowDownToLine />Import
+        </Button>
       </DialogTrigger>
       <DialogContent class="sm:max-w-[425px]">
         <DialogHeader>
@@ -18,6 +20,7 @@
                     type="file"
                     accept=".csv"
                     placeholder="Import an csv file"
+                    class="cursor-pointer"
                     @change="
                       (e: Event) => {
                         const target = e.target as HTMLInputElement
@@ -35,7 +38,13 @@
         </div>
 
         <DialogFooter>
-          <Button type="submit" form="dialogForm" :disabled="mutation.isPending.value">
+          <Button
+            type="submit"
+            form="dialogForm"
+            :disabled="mutation.isPending.value"
+            class="cursor-pointer"
+            aria-label="Submit button"
+          >
             <Loading v-if="mutation.isPending.value" />
             Submit
           </Button>
@@ -71,6 +80,7 @@ import * as z from 'zod'
 import Loading from '../Loading.vue'
 import { ref } from 'vue'
 import { toast } from 'vue3-toastify'
+import { apiFetch } from '@/lib/api'
 
 interface ImportExpenseRecordFormValues {
   file: File[]
@@ -94,35 +104,31 @@ const ImportExpenseRecord = async (data: ImportExpenseRecordFormValues) => {
   const formData = new FormData()
   formData.append('file', data.file[0])
 
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/expense-record/bulk`, {
+  const response = await apiFetch(`/expense-record/bulk`, {
     method: 'POST',
     body: formData,
   })
 
-  if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.msg || 'Failed to import expense records')
+  if (response.error) {
+    throw new Error(response.error.message || 'Failed to import expense records')
   }
 
-  return res.json()
+  return response.value
 }
 
 const mutation = useMutation({
   mutationFn: ImportExpenseRecord,
-  onSuccess: (data) => {
-    console.log('Expense record imported:', data)
+  onSuccess: () => {
     toast.success('Expense record imported successfully')
     isDialogOpen.value = false
     queryClient.invalidateQueries({ queryKey: ['expense-records'] })
   },
   onError: (error) => {
-    toast.error(error || 'Expense record imported failed')
-    console.error('Error importing records:', error)
+    toast.error(error.message || 'Expense record imported failed')
   },
 })
 
 const onSubmit = (values: ImportExpenseRecordFormValues) => {
-  console.log('Form submitted!', values)
   mutation.mutate({
     file: values.file,
   })

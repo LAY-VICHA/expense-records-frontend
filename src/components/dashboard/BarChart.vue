@@ -1,7 +1,7 @@
 <template>
   <div class="h-full border border-solid border-gray-200 rounded-xl">
-    <div class="grid grid-cols-4 p-5 pb-0 border-b border-solid border-b-gray-200">
-      <div class="col-span-2 flex flex-col gap-1 px-6 py-5 sm:py-6">
+    <div class="grid grid-cols-4 p-3 pb-0 border-b border-solid border-b-gray-200 md:p-5">
+      <div class="col-span-2 flex flex-col gap-1 px-3 py-5 sm:py-6 md:px-6">
         <p class="text-lg font-bold">
           Bar Chart -
           <span v-if="props.periodType === 'monthly'">Monthly</span>
@@ -14,19 +14,23 @@
         </p>
       </div>
 
-      <div class="px-6 py-5 border-l border-solid border-l-gray-200">
+      <div
+        class="flex flex-col justify-between px-3 py-5 border-l border-solid border-l-gray-200 md:px-6"
+      >
         <p class="text-start text-gray-600 text-sm">Total Expense</p>
-        <p class="font-bold text-3xl">
+        <p class="font-bold break-all text-xl lg:text-3xl">
           {{ props.barChartData.totalExpense }}
-          <span class="font-normal text-xs text-gray-600">USD</span>
+          <span class="font-normal text-xs text-gray-600 break-normal">USD</span>
         </p>
       </div>
 
-      <div class="px-6 py-5 border-l border-solid border-l-gray-200">
+      <div
+        class="flex flex-col justify-between px-3 py-5 border-l border-solid border-l-gray-200 md:px-6"
+      >
         <p class="text-start text-gray-600 text-sm">Average Expense</p>
-        <p class="font-bold text-3xl">
+        <p class="font-bold break-all text-xl lg:text-3xl">
           {{ props.barChartData.averageExpense }}
-          <span class="font-normal text-xs text-gray-600">USD</span>
+          <span class="font-normal text-xs text-gray-600 break-normal">USD</span>
         </p>
       </div>
     </div>

@@ -35,7 +35,12 @@
           </form>
         </div>
         <DialogFooter>
-          <Button type="submit" form="editForm" :disabled="mutation.isPending.value">
+          <Button
+            type="submit"
+            form="editForm"
+            :disabled="mutation.isPending.value"
+            class="cursor-pointer"
+          >
             <Loading v-if="mutation.isPending.value" />
             Save Changes
           </Button>
@@ -71,6 +76,7 @@ import * as z from 'zod'
 import { toast } from 'vue3-toastify'
 import Loading from '../Loading.vue'
 import { useRoute } from 'vue-router'
+import { apiFetch } from '@/lib/api'
 
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
@@ -107,7 +113,7 @@ const formSchema = toTypedSchema(
 
 const mutation = useMutation({
   mutationFn: async (data: editedCategory) => {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category/${props.category.id}`, {
+    const response = await apiFetch(`/category/${props.category.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -115,10 +121,11 @@ const mutation = useMutation({
       body: JSON.stringify(data),
     })
 
-    if (!res.ok) {
-      throw new Error('Failed to update category')
+    if (response.error) {
+      throw new Error(response.error.message || 'Failed to update category')
     }
-    return res.json()
+
+    return response.value
   },
   onSuccess: () => {
     toast.success('Category updated successfully')
@@ -135,8 +142,8 @@ const mutation = useMutation({
     })
   },
   onError: (error) => {
-    console.log(error)
-    toast.error(error instanceof Error ? error.message : 'Update failed')
+    error
+    toast.error(error.message || 'Update failed')
   },
 })
 

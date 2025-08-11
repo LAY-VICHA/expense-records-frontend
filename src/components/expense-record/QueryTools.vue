@@ -20,7 +20,7 @@
       />
 
       <Select v-model="selectedSubCategory">
-        <SelectTrigger class="w-full">
+        <SelectTrigger class="w-full cursor-pointer" aria-label="Select button">
           <SelectValue placeholder="Select a subcategory" />
         </SelectTrigger>
         <SelectContent v-if="data?.data">
@@ -28,14 +28,15 @@
             <div
               v-if="
                 category.subCategories.length > 0 &&
-                (selectedCategory.valueOf() === '' || selectedCategory.valueOf() === category.name)
+                (selectedCategory.valueOf() === '' || selectedCategory.valueOf() === category.id)
               "
             >
               <SelectLabel>{{ category.name }}</SelectLabel>
               <SelectItem
                 v-for="subCategory in category.subCategories"
                 :key="subCategory.id"
-                :value="subCategory.name"
+                :value="subCategory.id"
+                class="cursor-pointer"
               >
                 {{ subCategory.name }}
               </SelectItem>
@@ -51,8 +52,9 @@
       <CreateExpenseRecord />
       <Button
         variant="destructive"
-        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition cursor-pointer"
         @click="handleReset"
+        aria-label="reset filter button"
       >
         Reset Filters
       </Button>
@@ -74,12 +76,14 @@ import { Button } from '@/components/ui/button'
 import { useRoute, useRouter } from 'vue-router'
 import SearchComponent from '@/components/SearchComponent.vue'
 import SelectComponent from '@/components/SelectComponent.vue'
-import { keepPreviousData, useQuery } from '@tanstack/vue-query'
+import { keepPreviousData } from '@tanstack/vue-query'
 import { ApiResponse, AllCategories } from '@/types/api-response'
 import { computed, ref, watch } from 'vue'
 import DatePicker from '@/components/DatePicker.vue'
 import CreateExpenseRecord from './CreateExpenseRecord.vue'
 import ImportExpenseRecord from './ImportExpenseRecord.vue'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const router = useRouter()
@@ -98,7 +102,6 @@ const sortOptions = [
 ]
 
 const handleSearch = (searchQuery: string) => {
-  console.log('Search query:', searchQuery)
   router.replace({
     query: {
       ...route.query,
@@ -110,7 +113,6 @@ const handleSearch = (searchQuery: string) => {
 }
 
 const handleSortBy = (sortOption: string) => {
-  console.log('Sort option:', sortOption)
   router.replace({
     query: {
       ...route.query,
@@ -122,7 +124,6 @@ const handleSortBy = (sortOption: string) => {
 }
 
 const handleFilterCategory = (category: string) => {
-  console.log('Filter category:', category)
   selectedCategory.value = category
   router.replace({
     query: {
@@ -140,7 +141,6 @@ watch(selectedSubCategory, (newValue) => {
 })
 
 const handleFilterSubCategory = (subCategory: string) => {
-  console.log('Filter subcategory:', subCategory)
   router.replace({
     query: {
       ...route.query,
@@ -152,7 +152,6 @@ const handleFilterSubCategory = (subCategory: string) => {
 }
 
 const onDateRangeSelected = (date: { start: string; end: string }) => {
-  console.log('selected date ', date.start, date.end)
   router.replace({
     query: {
       ...route.query,
@@ -170,10 +169,11 @@ const handleReset = () => {
   resetFilterCategoryKey.value++
   resetDatePickerKey.value++
   selectedSubCategory.value = ''
+  selectedCategory.value = ''
   router.replace({ query: {} })
 }
 
-const { data } = useQuery<ApiResponse<AllCategories>>({
+const { data } = useNoRetryQuery<ApiResponse<AllCategories>>({
   queryFn: async () => await fetchCategory(),
   queryKey: ['all-categories'],
   placeholderData: keepPreviousData,
@@ -183,17 +183,18 @@ const categoryOptions = computed(() =>
   data.value?.data
     ? data.value.data.map((category) => ({
         label: category.name,
-        value: category.name,
+        value: category.id,
       }))
     : [],
 )
 
 const fetchCategory = async (): Promise<ApiResponse<AllCategories>> => {
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category/all`)
+  const response = await apiFetch<ApiResponse<AllCategories>>(`/category/all`)
 
-  if (!response.ok) throw new Error('Cannot get data')
+  if (response.error) {
+    throw new Error(response.error.message || 'Failed to fetch categories')
+  }
 
-  const data = await response.json()
-  return data
+  return response.value
 }
 </script>

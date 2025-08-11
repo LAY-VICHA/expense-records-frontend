@@ -2,7 +2,7 @@
   <Form v-slot="{ handleSubmit }" as="" :validation-schema="formSchema">
     <Dialog v-model:open="isDialogOpen">
       <DialogTrigger as-child>
-        <Button class=""> Create </Button>
+        <Button class="cursor-pointer"> Create </Button>
       </DialogTrigger>
       <DialogContent class="sm:max-w-[425px]">
         <DialogHeader>
@@ -36,7 +36,12 @@
         </div>
 
         <DialogFooter>
-          <Button type="submit" form="dialogForm" :disabled="mutation.isPending.value">
+          <Button
+            type="submit"
+            form="dialogForm"
+            :disabled="mutation.isPending.value"
+            class="cursor-pointer"
+          >
             <Loading v-if="mutation.isPending.value" />
             Submit
           </Button>
@@ -72,6 +77,7 @@ import * as z from 'zod'
 import Loading from '../Loading.vue'
 import { ref } from 'vue'
 import { toast } from 'vue3-toastify'
+import { apiFetch } from '@/lib/api'
 
 interface CategoryFormValues {
   name: string
@@ -88,7 +94,7 @@ const formSchema = toTypedSchema(
 )
 
 const createCategory = async (data: CategoryFormValues) => {
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category`, {
+  const response = await apiFetch(`/category`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -96,29 +102,26 @@ const createCategory = async (data: CategoryFormValues) => {
     body: JSON.stringify(data),
   })
 
-  if (!res.ok) {
-    throw new Error('Failed to create category')
+  if (response.error) {
+    throw new Error(response.error.message || 'Failed to create category')
   }
 
-  return res.json()
+  return response.value
 }
 
 const mutation = useMutation({
   mutationFn: createCategory,
-  onSuccess: (data) => {
-    console.log('Category created:', data)
+  onSuccess: () => {
     toast.success('Category created successfully')
     isDialogOpen.value = false
     queryClient.invalidateQueries({ queryKey: ['categories'] })
   },
   onError: (error) => {
-    toast.error(error || 'Category created failed')
-    console.error('Error creating category:', error)
+    toast.error(error.message || 'Category created failed')
   },
 })
 
 const onSubmit = (values: CategoryFormValues) => {
-  console.log('Form submitted!', values)
   mutation.mutate({
     name: values.name,
     description: values.description,

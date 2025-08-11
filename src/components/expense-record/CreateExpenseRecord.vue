@@ -7,7 +7,7 @@
   >
     <Dialog v-model:open="isDialogOpen">
       <DialogTrigger as-child>
-        <Button class=""> Create </Button>
+        <Button class="cursor-pointer" aria-label="Create expense record button"> Create </Button>
       </DialogTrigger>
       <DialogContent class="sm:max-w-[425px]">
         <DialogHeader>
@@ -24,7 +24,7 @@
                       variant="outline"
                       :class="
                         cn(
-                          'w-full justify-start text-left font-normal',
+                          'w-full justify-start text-left font-normal cursor-pointer',
                           !expenseDateValue && 'text-muted-foreground',
                         )
                       "
@@ -50,7 +50,7 @@
                 <FormMessage />
               </FormItem>
             </FormField>
-            <FormField v-slot="{ componentField }" name="category">
+            <FormField v-slot="{ componentField }" name="categoryId">
               <FormItem>
                 <FormLabel>Category</FormLabel>
 
@@ -59,7 +59,7 @@
                   @update:modelValue="selectedCategory = String($event)"
                   class="w-[300px]"
                 >
-                  <FormControl class="w-full">
+                  <FormControl class="w-full cursor-pointer">
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -69,7 +69,8 @@
                       <SelectItem
                         v-for="category in allCategories"
                         :key="category.id"
-                        :value="category.name"
+                        :value="category.id"
+                        class="cursor-pointer"
                       >
                         {{ category.name }}
                       </SelectItem>
@@ -79,12 +80,12 @@
                 <FormMessage />
               </FormItem>
             </FormField>
-            <FormField v-slot="{ componentField }" name="subCategory">
+            <FormField v-slot="{ componentField }" name="subCategoryId">
               <FormItem>
                 <FormLabel>Sub Category</FormLabel>
 
                 <Select :disabled="isSubCategoryDisabled" v-bind="componentField" class="w-[300px]">
-                  <FormControl class="w-full">
+                  <FormControl class="w-full cursor-pointer">
                     <SelectTrigger>
                       <SelectValue placeholder="Select a sub category" />
                     </SelectTrigger>
@@ -92,15 +93,14 @@
                   <SelectContent v-if="allCategories" class="max-h-[250px] overflow-y-auto">
                     <SelectGroup v-for="category in allCategories" :key="category.id">
                       <div
-                        v-if="
-                          category.subCategories.length > 0 && selectedCategory === category.name
-                        "
+                        v-if="category.subCategories.length > 0 && selectedCategory === category.id"
                       >
                         <SelectLabel>{{ category.name }}</SelectLabel>
                         <SelectItem
                           v-for="subCategory in category.subCategories"
                           :key="subCategory.id"
-                          :value="subCategory.name"
+                          :value="subCategory.id"
+                          class="cursor-pointer"
                         >
                           {{ subCategory.name }}
                         </SelectItem>
@@ -191,7 +191,13 @@
         </div>
 
         <DialogFooter>
-          <Button type="submit" form="dialogForm" :disabled="mutation.isPending.value">
+          <Button
+            type="submit"
+            form="dialogForm"
+            :disabled="mutation.isPending.value"
+            class="cursor-pointer"
+            aria-label="Submit button"
+          >
             <Loading v-if="mutation.isPending.value" />
             Submit
           </Button>
@@ -234,7 +240,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { CalendarIcon } from 'lucide-vue-next'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { keepPreviousData, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import Loading from '../Loading.vue'
@@ -248,11 +254,13 @@ import {
   getLocalTimeZone,
   today,
 } from '@internationalized/date'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 interface ExpenseRecordFormValues {
   expenseDate: string
-  category: string
-  subCategory?: string
+  categoryId: string
+  subCategoryId?: string
   amount: number
   currency: 'USD' | 'KHR'
   reason?: string
@@ -269,8 +277,8 @@ const formSchema = toTypedSchema(
       month: z.number(),
       year: z.number(),
     }),
-    category: z.string().min(1, 'Category is required'),
-    subCategory: z.string().optional(),
+    categoryId: z.string().min(1, 'Category is required'),
+    subCategoryId: z.string().optional(),
     amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
     currency: z.string().refine((v) => ['USD', 'KHR'].includes(v), {
       message: 'Currency must be either USD or KHR.',
@@ -285,16 +293,16 @@ const df = new DateFormatter('en-US', {
 const expenseDateValue = ref<DateValue>(today(getLocalTimeZone()))
 
 const fetchAllCategory = async (): Promise<ApiResponse<AllCategories>> => {
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/category/all`)
+  const response = await apiFetch<ApiResponse<AllCategories>>(`/category/all`)
 
-  if (!response.ok) throw new Error('Cannot get data')
+  if (response.error) {
+    throw new Error(response.error.message)
+  }
 
-  const data = await response.json()
-
-  return data
+  return response.value
 }
 
-const { data } = useQuery<ApiResponse<AllCategories>>({
+const { data } = useNoRetryQuery<ApiResponse<AllCategories>>({
   queryFn: async () => await fetchAllCategory(),
   queryKey: ['all-categories'],
   placeholderData: keepPreviousData,
@@ -306,13 +314,13 @@ const selectedCategory = ref<string | null>('')
 const isSubCategoryDisabled = computed(() => {
   if (!selectedCategory.value) return true
 
-  const selected = data?.value?.data?.find((category) => category.name === selectedCategory.value)
+  const selected = data?.value?.data?.find((category) => category.id === selectedCategory.value)
 
   return !selected || selected.subCategories.length === 0
 })
 
 const createExpenseRecord = async (data: ExpenseRecordFormValues) => {
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/expense-record`, {
+  const response = await apiFetch(`/expense-record`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -320,24 +328,22 @@ const createExpenseRecord = async (data: ExpenseRecordFormValues) => {
     body: JSON.stringify(data),
   })
 
-  if (!res.ok) {
-    throw new Error('Failed to create expense record')
+  if (response.error) {
+    throw new Error(response.error.message)
   }
 
-  return res.json()
+  return response.value
 }
 
 const mutation = useMutation({
   mutationFn: createExpenseRecord,
-  onSuccess: (data) => {
-    console.log('Expense record created:', data)
+  onSuccess: () => {
     toast.success('Expense record created successfully')
     isDialogOpen.value = false
     queryClient.invalidateQueries({ queryKey: ['expense-records'] })
   },
   onError: (error) => {
-    toast.error(error || 'Expense record created failed')
-    console.error('Error creating expense record:', error)
+    toast.error(error.message || 'Expense record created failed')
   },
 })
 
@@ -347,11 +353,10 @@ const onSubmit = (values: ExpenseRecordFormValues) => {
     const formattedDate = date.toLocaleDateString('sv-SE')
     values.expenseDate = formattedDate
   }
-  console.log('Form submitted!', values)
   mutation.mutate({
     expenseDate: values.expenseDate,
-    category: values.category,
-    subCategory: values.subCategory,
+    categoryId: values.categoryId,
+    subCategoryId: values.subCategoryId,
     amount: values.amount,
     currency: values.currency,
     reason: values.reason,

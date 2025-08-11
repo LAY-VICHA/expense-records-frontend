@@ -57,7 +57,9 @@ export type ExpenseRecord = {
   currency: string
   reason: string | null
   category: string
+  categoryId: string
   subCategory: string | null
+  subCategoryId: string | null
   createdAt: Date
   updatedAt: Date | null
 }
@@ -69,7 +71,9 @@ export type EditExpenseReocrd = {
   currency: string
   reason: string | null
   category: string
+  categoryId: string
   subCategory: string | null
+  subCategoryId: string | null
 }
 
 type DataPoints = {
@@ -100,4 +104,9 @@ type PieChartData = {
 export type PieChartResponse = {
   totalExpense: number
   pieChartData: PieChartData[]
+}
+
+export type AuthCredentials = {
+  email: string
+  password: string
 }

@@ -9,9 +9,9 @@
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogCancel class="cursor-pointer">Cancel</AlertDialogCancel>
         <AlertDialogAction
-          class="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
+          class="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full cursor-pointer sm:w-auto"
           @click="deleteSubCategory(props.subCategoryId)"
           :disabled="mutation.isPending.value"
         >
@@ -38,6 +38,7 @@ import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue3-toastify'
+import { apiFetch } from '@/lib/api'
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
 const pageSize = computed(() => route.query.pageSize ?? '10')
@@ -61,17 +62,18 @@ const queryClient = useQueryClient()
 
 const mutation = useMutation({
   mutationFn: async (subCategoryId: string) => {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/sub-category/${subCategoryId}`, {
+    const response = await apiFetch(`/sub-category/${subCategoryId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
       },
     })
 
-    if (!res.ok) {
-      throw new Error('Failed to Delete subcategory')
+    if (response.error) {
+      throw new Error(response.error.message || 'Failed to delete sub-category')
     }
-    return res.json()
+
+    return response.value
   },
   onSuccess: async () => {
     toast.success('Subcategory deleted successfully')
@@ -88,8 +90,7 @@ const mutation = useMutation({
     })
   },
   onError: (error) => {
-    console.log(error)
-    toast.error(error instanceof Error ? error.message : 'Delete failed')
+    toast.error(error.message || 'Delete failed')
   },
 })
 

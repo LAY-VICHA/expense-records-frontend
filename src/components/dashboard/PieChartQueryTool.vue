@@ -2,7 +2,7 @@
   <div class="w-full pb-6">
     <div class="w-full grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
       <Select v-model="selectedYear">
-        <SelectTrigger class="w-full">
+        <SelectTrigger class="w-full cursor-pointer" aria-label="Select button">
           <SelectValue placeholder="Select a year" />
         </SelectTrigger>
         <SelectContent class="max-h-[300px]">
@@ -10,6 +10,7 @@
             v-for="y in new Date().getFullYear() - 2000 + 1"
             :key="y"
             :value="(2000 + y - 1).toString()"
+            class="cursor-pointer"
           >
             {{ 2000 + y - 1 }}
           </SelectItem>
@@ -17,11 +18,16 @@
       </Select>
 
       <Select :disabled="!selectedYear" v-model="selectedMonth">
-        <SelectTrigger class="w-full">
+        <SelectTrigger class="w-full cursor-pointer" aria-label="Select button">
           <SelectValue placeholder="Select a month" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem v-for="(m, i) in monthOptions" :key="i" :value="(i + 1).toString()">
+          <SelectItem
+            v-for="(m, i) in monthOptions"
+            :key="i"
+            :value="(i + 1).toString()"
+            class="cursor-pointer"
+          >
             {{ formatter.custom(new Date(2000, i, 1), { month: 'long' }) }}
           </SelectItem>
         </SelectContent>
@@ -65,17 +71,23 @@
 
       <div>
         <div class="size-full flex items-center justify-center space-x-2">
-          <Switch id="include-high-expense" v-model="isIncludeHighExepense" class="" />
-          <Label for="include-high-expense" class="text-sm">High Expense</Label>
+          <Switch
+            id="include-high-expense-pie"
+            v-model="isIncludeHighExepense"
+            class="cursor-pointer"
+          />
+          <Label for="include-high-expense-pie" class="text-sm cursor-pointer">High Expense</Label>
         </div>
       </div>
     </div>
 
     <div class="w-full flex justify-end gap-2.5 pt-4">
-      <Button variant="outline" class="" @click="handleClearMonth"> Clear Month </Button>
+      <Button variant="outline" class="cursor-pointer" @click="handleClearMonth">
+        Clear Month
+      </Button>
       <Button
         variant="destructive"
-        class="px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+        class="px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition cursor-pointer"
         @click="handleReset"
       >
         Reset Filters
@@ -113,7 +125,6 @@ watch(selectedYear, (newValue) => {
 })
 
 const handleYear = (year: string) => {
-  console.log('Selected year:', year)
   router.replace({
     query: {
       ...route.query,
@@ -127,7 +138,6 @@ watch(selectedMonth, (newValue) => {
 })
 
 const handleMonth = (month: string) => {
-  console.log('Selected month:', month)
   router.replace({
     query: {
       ...route.query,
@@ -141,7 +151,6 @@ watch(groupBy, (newValue) => {
 })
 
 const handleGroupBy = (groupBy: string) => {
-  console.log('Selected groupBy:', groupBy)
   router.replace({
     query: {
       ...route.query,
@@ -155,7 +164,6 @@ watch(isIncludeHighExepense, (newValue) => {
 })
 
 const handleIsIncludeHighExepense = (handleIsIncludeHighExepense: boolean) => {
-  console.log('is Include High Expense Record:', handleIsIncludeHighExepense)
   router.replace({
     query: {
       ...route.query,
@@ -180,5 +188,14 @@ const handleReset = () => {
   selectedMonth.value = (new Date().getMonth() + 1).toString()
   groupBy.value = 'category'
   isIncludeHighExepense.value = false
+  router.replace({
+    query: {
+      ...route.query,
+      year: new Date().getFullYear().toString(),
+      month: (new Date().getMonth() + 1).toString(),
+      groupBy: 'category',
+      isIncludeHighExpenseRecordPieChart: 'false',
+    },
+  })
 }
 </script>
