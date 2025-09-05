@@ -33,7 +33,7 @@
         </SelectContent>
       </Select>
 
-      <div class="flex">
+      <div class="flex items-center">
         <div class="flex-1">
           <input
             type="radio"
@@ -115,7 +115,9 @@ const formatter = useDateFormatter(locale.value)
 
 const route = useRoute()
 const router = useRouter()
-const selectedYear = ref<string>(new Date().getFullYear().toString())
+const selectedYear = ref<string>(
+  (route.query.yearBarChart as string) || new Date().getFullYear().toString(),
+)
 const selectedMonth = ref<string>(String(route.query.month))
 const groupBy = ref<string>(route.query.groupBy === 'subCategory' ? 'subCategory' : 'category')
 const isIncludeHighExepense = ref<boolean>(false)
@@ -185,14 +187,14 @@ const handleClearMonth = () => {
 
 const handleReset = () => {
   selectedYear.value = new Date().getFullYear().toString()
-  selectedMonth.value = (new Date().getMonth() + 1).toString()
+  selectedMonth.value = ''
   groupBy.value = 'category'
   isIncludeHighExepense.value = false
   router.replace({
     query: {
       ...route.query,
       year: new Date().getFullYear().toString(),
-      month: (new Date().getMonth() + 1).toString(),
+      month: '',
       groupBy: 'category',
       isIncludeHighExpenseRecordPieChart: 'false',
     },

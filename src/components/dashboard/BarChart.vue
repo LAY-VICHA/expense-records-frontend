@@ -3,14 +3,10 @@
     <div class="grid grid-cols-4 p-3 pb-0 border-b border-solid border-b-gray-200 md:p-5">
       <div class="col-span-2 flex flex-col gap-1 px-3 py-5 sm:py-6 md:px-6">
         <p class="text-lg font-bold">
-          Bar Chart -
-          <span v-if="props.periodType === 'monthly'">Monthly</span>
-          <span v-else>Yearly</span> Summary
+          Bar Chart - {{ props.year }} Summary
         </p>
         <p class="text-sm text-gray-600">
-          showing total expense for the last
-          <span v-if="props.periodType === 'monthly'">12 months</span>
-          <span v-else>7 years</span>
+          showing total expense in {{ props.year }}
         </p>
       </div>
 
@@ -60,7 +56,7 @@ import BarChartQueryTool from '@/components/dashboard/BarChartQueryTool.vue'
 import { ref, watch } from 'vue'
 import { BarChartResponse } from '@/types/api-response'
 import type { ChartData, ChartDataset } from 'chart.js'
-import type { LocationQueryValue } from 'vue-router'
+import { LocationQueryValue } from 'vue-router'
 
 ChartJS.register(
   Title,
@@ -76,37 +72,25 @@ ChartJS.register(
 
 const props = defineProps<{
   barChartData: BarChartResponse
-  periodType: string | LocationQueryValue[]
+  year: string  | LocationQueryValue[]
 }>()
 
-function getLast12Months() {
-  const now = new Date()
-  const months = []
+function getMonths(year: string): string[] {
+  const date = []
 
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push(`${d.getFullYear()}-${d.getMonth() + 1}`)
+  for (let i = 0; i <= 11; i++) {
+    date.push(`${year}-${i + 1}`)
   }
 
-  return months
-}
-
-function getLast7Years() {
-  const now = new Date()
-  const years = []
-  for (let i = 6; i >= 0; i--) {
-    years.push(`${now.getFullYear() - i}`)
-  }
-  return years
+  return date;
 }
 
 function formatLabel(str: string) {
-  if (props.periodType === 'monthly') {
-    const [year, month] = str.split('-')
-    const date = new Date(Number(year), Number(month) - 1)
-    return date.toLocaleString('default', { month: 'short', year: 'numeric' })
-  }
-  return str
+  const [year, month] = str.split('-')
+  const date = new Date(Number(year), Number(month) - 1)
+  console.log(date.toLocaleString('default', { month: 'short', year: 'numeric' }));
+  
+  return date.toLocaleString('default', { month: 'short', year: 'numeric' })
 }
 
 const chartData = ref<ChartData<'bar' | 'line', number[], string>>({
@@ -132,7 +116,7 @@ const chartOptions = ref({
 })
 
 const updateChartWith = (newData: BarChartResponse) => {
-  const keys = props.periodType === 'monthly' ? getLast12Months() : getLast7Years()
+  const keys = getMonths(props.year as string)
   const valueMap = Object.fromEntries(keys.map((k) => [k, 0]))
 
   newData.dataPoints.forEach(({ date, amount }) => {
@@ -161,13 +145,12 @@ const updateChartWith = (newData: BarChartResponse) => {
       ],
     }
 
-    chartOptions.value.plugins.title.text =
-      props.periodType === 'monthly' ? 'Last 12 Months Expense' : 'Last 7 Years Expense'
+    chartOptions.value.plugins.title.text = `${props.year} Expense`
   })
 }
 
 watch(
-  () => [props.barChartData, props.periodType],
+  () => [props.barChartData],
   () => {
     updateChartWith(props.barChartData)
   },

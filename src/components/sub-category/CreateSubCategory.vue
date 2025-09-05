@@ -127,7 +127,7 @@ const formSchema = toTypedSchema(
   z.object({
     categoryId: z.string().min(1, 'Category is required'),
     name: z.string().min(2).max(50),
-    description: z.string().max(200),
+    description: z.string().max(200).optional(),
   }),
 )
 

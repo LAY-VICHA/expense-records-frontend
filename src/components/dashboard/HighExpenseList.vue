@@ -1,9 +1,24 @@
 <template>
-  <div class="p-8">
-    <div class="text-3xl font-bold">Expense Record</div>
+  <div class="pt-8">
+    <div class="text-3xl font-bold">High Expense Record</div>
 
     <div class="py-4 pb-6 flex justify-between items-center gap-4">
-      <QueryTools />
+      <div class="w-full flex justify-between gap-4">
+        <SearchComponent
+          @search="handleSearch"
+          :key="resetSearchKey"
+          placeholder="Search record by reason..."
+          class="max-w-sm"
+        />
+        <Button
+          variant="destructive"
+          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition cursor-pointer"
+          @click="handleReset"
+          aria-label="reset filter button"
+        >
+          Reset Filters
+        </Button>
+      </div>
     </div>
 
     <div v-if="isLoading" class="w-full flex justify-center pt-4"><Loading /></div>
@@ -17,8 +32,7 @@
             <TableHead>Sub Category</TableHead>
             <TableHead class="w-50 md:w-75 2xl:w-120">Reason</TableHead>
             <TableHead>Amount</TableHead>
-            <TableHead>Spent In</TableHead>
-            <TableHead class="text-right"> Action </TableHead>
+            <TableHead class="text-right">Spent In</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody v-if="expenseRecord?.items">
@@ -34,37 +48,17 @@
               >{{ item.reason }}</TableCell
             >
             <TableCell>
-              <span v-if="Number(item.amount) < 5" class="text-green-600 font-medium">{{
-                item.amount
-              }}</span>
-              <span
-                v-if="Number(item.amount) < 50 && Number(item.amount) >= 5"
-                class="text-yellow-600 font-medium"
-                >{{ item.amount }}</span
-              >
-              <span v-if="Number(item.amount) >= 50" class="text-red-600 font-medium">{{
-                item.amount
-              }}</span>
+              <span class="text-red-600 font-medium">{{ item.amount }}</span>
             </TableCell>
-            <TableCell v-if="item.currency === 'USD'">
+            <TableCell v-if="item.currency === 'USD'" class="text-right">
               <span class="font-medium text-green-700 bg-green-100 rounded-md py-0.75 px-2.5">{{
                 item.currency
               }}</span>
             </TableCell>
-            <TableCell v-else>
+            <TableCell v-else class="text-right">
               <span class="font-medium text-yellow-700 bg-yellow-100 rounded-md py-0.75 px-2.5">
                 {{ item.currency }}
               </span>
-            </TableCell>
-            <TableCell class="text-right flex justify-end gap-2.5 items-center">
-              <SquarePen
-                @click="openEditExpenseRecord(item)"
-                class="size-4 cursor-pointer hover:text-secondary"
-              />
-              <Trash2
-                @click="openDeleteExpenseRecord(item.id)"
-                class="size-4 cursor-pointer hover:text-destructive"
-              />
             </TableCell>
           </TableRow>
         </TableBody>
@@ -82,13 +76,14 @@
         </TableCaption>
       </Table>
     </Transition>
-
-    <EditExpenseRecord v-model="isEditDialogOpen" :expenseRecord="selectedExpenseRecord" />
-    <DeleteExpenseRecord v-model="isDeleteDialogOpen" :expenseRecordId="selectedId" />
   </div>
 </template>
 
 <script setup lang="ts">
+import Loading from '@/components/Loading.vue'
+import PaginationComponent from '@/components/PaginationComponent.vue'
+import SearchComponent from '@/components/SearchComponent.vue'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -98,48 +93,35 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { SquarePen, Trash2 } from 'lucide-vue-next'
-import { keepPreviousData } from '@tanstack/vue-query'
-import { useRoute } from 'vue-router'
-import {
-  ApiResponse,
-  ExpenseRecord,
-  EditExpenseReocrd,
-  PaginatedResult,
-} from '@/types/api-response'
-import { computed, ref } from 'vue'
-import Loading from '@/components/Loading.vue'
-import QueryTools from '@/components/expense-record/QueryTools.vue'
-import EditExpenseRecord from '@/components/expense-record/EditExpenseRecord.vue'
-import DeleteExpenseRecord from '@/components/expense-record/DeleteExpenseRecord.vue'
-import PaginationComponent from '@/components/PaginationComponent.vue'
 import { apiFetch } from '@/lib/api'
 import { useNoRetryQuery } from '@/lib/noRetryQuery'
+import { ApiResponse, ExpenseRecord, PaginatedResult } from '@/types/api-response'
+import { keepPreviousData } from '@tanstack/vue-query'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
-
+const router = useRouter()
 const page = computed(() => route.query.page ?? '1')
 const pageSize = computed(() => route.query.pageSize ?? '10')
+const resetSearchKey = ref(0)
 const reason = computed(() => route.query.reason ?? '')
-const sortBy = computed(() => route.query.sortBy ?? '')
-const filterCategory = computed(() => route.query.filterCategory ?? '')
-const filterSubCategory = computed(() => route.query.filterSubCategory ?? '')
-const filterStartDate = computed(() => route.query.filterStartDate ?? '')
-const filterEndDate = computed(() => route.query.filterEndDate ?? '')
-const isEditDialogOpen = ref(false)
-const selectedExpenseRecord = ref<EditExpenseReocrd>({
-  id: '',
-  expenseDate: new Date(),
-  amount: '',
-  currency: '',
-  reason: '',
-  category: '',
-  categoryId: '',
-  subCategory: '',
-  subCategoryId: '',
-})
-const isDeleteDialogOpen = ref(false)
-const selectedId = ref<string>('')
+
+const handleSearch = (searchQuery: string) => {
+  router.replace({
+    query: {
+      ...route.query,
+      page: 1,
+      pageSize: 10,
+      reason: searchQuery || '',
+    },
+  })
+}
+
+const handleReset = () => {
+  resetSearchKey.value++
+  router.replace({ query: {} })
+}
 
 const { data, isLoading } = useNoRetryQuery<ApiResponse<PaginatedResult<ExpenseRecord>>>({
   queryFn: async () => await fetchExpenseRecord(),
@@ -149,11 +131,6 @@ const { data, isLoading } = useNoRetryQuery<ApiResponse<PaginatedResult<ExpenseR
       page: page.value,
       pageSize: pageSize.value,
       ...(reason.value ? { reason } : {}),
-      ...(sortBy.value ? { sortBy } : {}),
-      ...(filterCategory.value ? { filterCategory } : {}),
-      ...(filterSubCategory.value ? { filterSubCategory } : {}),
-      ...(filterStartDate.value ? { filterStartDate } : {}),
-      ...(filterEndDate.value ? { filterEndDate } : {}),
     },
   ]),
   placeholderData: keepPreviousData,
@@ -162,13 +139,9 @@ const { data, isLoading } = useNoRetryQuery<ApiResponse<PaginatedResult<ExpenseR
 const fetchExpenseRecord = async (): Promise<ApiResponse<PaginatedResult<ExpenseRecord>>> => {
   const query = new URLSearchParams()
   if (reason.value) query.set('reason', String(reason.value))
-  if (sortBy.value) query.set('sortBy', String(sortBy.value))
-  if (filterCategory.value) query.set('filterCategory', String(filterCategory.value))
-  if (filterSubCategory.value) query.set('filterSubCategory', String(filterSubCategory.value))
-  if (filterStartDate.value) query.set('filterStartDate', String(filterStartDate.value))
-  if (filterEndDate.value) query.set('filterEndDate', String(filterEndDate.value))
   query.set('page', String(page.value))
   query.set('pageSize', String(pageSize.value))
+  query.set('isHighExpenseRecord', 'true')
 
   const response = await apiFetch<ApiResponse<PaginatedResult<ExpenseRecord>>>(
     `/expense-record?${query}`,
@@ -186,15 +159,5 @@ const expenseRecord = computed(() => data.value?.data)
 const convertDate = (date: Date): string => {
   const dateString = new Date(date).toISOString()
   return dateString.split('T')[0]
-}
-
-function openEditExpenseRecord(item: EditExpenseReocrd) {
-  selectedExpenseRecord.value = item
-  isEditDialogOpen.value = true
-}
-
-function openDeleteExpenseRecord(id: string) {
-  selectedId.value = id
-  isDeleteDialogOpen.value = true
 }
 </script>

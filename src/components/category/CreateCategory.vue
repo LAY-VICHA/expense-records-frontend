@@ -89,7 +89,7 @@ const queryClient = useQueryClient()
 const formSchema = toTypedSchema(
   z.object({
     name: z.string().min(2).max(50),
-    description: z.string().max(200),
+    description: z.string().max(200).optional(),
   }),
 )
 

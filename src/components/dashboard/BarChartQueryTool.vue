@@ -35,35 +35,21 @@
         </SelectContent>
       </Select>
 
-      <div class="flex">
-        <div class="flex-1">
-          <input
-            type="radio"
-            id="monthly"
-            value="monthly"
-            v-model="periodType"
-            class="peer hidden"
-          />
-          <label
-            for="monthly"
-            dir="ltr"
-            class="flex text-sm justify-center items-center size-full peer-checked:bg-secondary peer-checked:text-white bg-muted text-muted-foreground px-4 py-1.5 rounded-s-md cursor-pointer transition"
+      <Select v-model="selectedYear">
+        <SelectTrigger class="w-full cursor-pointer" aria-label="Select button">
+          <SelectValue placeholder="Select a year" />
+        </SelectTrigger>
+        <SelectContent class="max-h-[300px]">
+          <SelectItem
+            v-for="y in new Date().getFullYear() - 2000 + 1"
+            :key="y"
+            :value="(2000 + y - 1).toString()"
+            class="cursor-pointer"
           >
-            Monthly
-          </label>
-        </div>
-
-        <div class="flex-1">
-          <input type="radio" id="yearly" value="yearly" v-model="periodType" class="peer hidden" />
-          <label
-            for="yearly"
-            dir="rtl"
-            class="flex text-sm justify-center items-center size-full peer-checked:bg-secondary peer-checked:text-white bg-muted text-muted-foreground px-4 py-1.5 rounded-s-md cursor-pointer transition"
-          >
-            Yearly
-          </label>
-        </div>
-      </div>
+            {{ 2000 + y - 1 }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
 
       <div class="flex items-center justify-center space-x-2">
         <Switch id="include-high-expense" v-model="isIncludeHighExepense" class="cursor-pointer" />
@@ -107,7 +93,7 @@ const route = useRoute()
 const router = useRouter()
 const selectedCategoryValue = ref<string>('')
 const selectedSubCategory = ref<string>('')
-const periodType = ref<string>(route.query.periodType === 'yearly' ? 'yearly' : 'monthly')
+const selectedYear = ref<string>(route.query.yearBarChart as string || new Date().getFullYear().toString())
 const isIncludeHighExepense = ref<boolean>(false)
 const resetCategoryKey = ref(0)
 
@@ -148,17 +134,18 @@ const handleIncludeHighExpense = (isIncludeHighExepense: boolean) => {
   })
 }
 
-watch(periodType, (newValue) => {
-  handleSelectedPeriodType(newValue)
+watch(selectedYear, (newValue) => {
+  handleYear(newValue)
 })
 
-const handleSelectedPeriodType = (periodType: string) => {
+const handleYear = (yearBarChart: string) => {
   router.replace({
     query: {
       ...route.query,
-      periodType: periodType || '',
+      yearBarChart: yearBarChart || '',
     },
   })
+  
 }
 
 const { data } = useNoRetryQuery<ApiResponse<AllCategories>>({
@@ -190,14 +177,14 @@ const handleReset = () => {
   resetCategoryKey.value++
   selectedCategoryValue.value = ''
   selectedSubCategory.value = ''
-  periodType.value = 'monthly'
+  selectedYear.value = new Date().getFullYear().toString()
   isIncludeHighExepense.value = false
   router.replace({
     query: {
       ...route.query,
       selectedCategory: '',
       selectedSubCategory: '',
-      periodType: 'monthly',
+      yearBarChart: new Date().getFullYear().toString(),
       isIncludeHighExpenseRecord: 'false',
     },
   })

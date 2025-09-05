@@ -43,8 +43,8 @@
         class="w-full h-full grid grid-cols-1 xl:grid-cols-7 gap-y-5"
       >
         <div class="xl:col-span-4">
-          <BarChart v-if="barChartData" :barChartData="barChartData" :periodType="periodType" />
-          <BarChart v-else :barChartData="barChartWithoutData" :periodType="periodType" />
+          <BarChart v-if="barChartData" :barChartData="barChartData" :year="yearBarChart" />
+          <BarChart v-else :barChartData="barChartWithoutData" :year="yearBarChart" />
         </div>
         <div class="xl:col-span-3 xl:pl-6">
           <PieChart
@@ -57,34 +57,37 @@
         </div>
       </div>
     </section>
+
+    <HighExpenseList />  
   </div>
 </template>
 
 <script setup lang="ts">
-import { CircleDollarSign, CalendarDays, ChartSpline } from 'lucide-vue-next'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import BarChart from '@/components/dashboard/BarChart.vue'
+import HighExpenseList from '@/components/dashboard/HighExpenseList.vue'
 import PieChart from '@/components/dashboard/PieChart.vue'
-import { keepPreviousData, useQuery } from '@tanstack/vue-query'
+import Loading from '@/components/Loading.vue'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { apiFetch } from '@/lib/api'
+import { useNoRetryQuery } from '@/lib/noRetryQuery'
 import {
   ApiResponse,
   BarChartResponse,
   CardDataResponse,
   PieChartResponse,
 } from '@/types/api-response'
+import { keepPreviousData, useQuery } from '@tanstack/vue-query'
+import { CalendarDays, ChartSpline, CircleDollarSign } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import Loading from '@/components/Loading.vue'
-import { apiFetch } from '@/lib/api'
-import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const selectedCategory = computed(() => route.query.selectedCategory ?? '')
 const selectedSubCategory = computed(() => route.query.selectedSubCategory ?? '')
-const periodType = computed(() => route.query.periodType ?? 'monthly')
+const yearBarChart = computed(() => route.query.yearBarChart ?? new Date().getFullYear().toString())
 const isIncludeHighExpenseRecord = computed(() => route.query.isIncludeHighExpenseRecord ?? false)
 
-const year = computed(() => route.query.year ?? '2025')
+const year = computed(() => route.query.year ?? new Date().getFullYear().toString())
 const month = computed(() => route.query.month ?? '')
 const groupBy = computed(() => route.query.groupBy ?? 'category')
 const isIncludeHighExpenseRecordPieChart = computed(
@@ -116,7 +119,7 @@ const { data: barChartDataResponse, isLoading } = useNoRetryQuery<ApiResponse<Ba
     {
       ...(selectedCategory.value ? { selectedCategory } : {}),
       ...(selectedSubCategory.value ? { selectedSubCategory } : {}),
-      ...(periodType.value ? { periodType } : {}),
+      ...(yearBarChart.value ? { yearBarChart } : {}),
       ...(isIncludeHighExpenseRecord.value ? { isIncludeHighExpenseRecord } : {}),
     },
   ]),
@@ -135,7 +138,7 @@ const fetchBarChartData = async (): Promise<ApiResponse<BarChartResponse>> => {
   const query = new URLSearchParams()
   if (selectedCategory.value) query.set('selectedCategory', String(selectedCategory.value))
   if (selectedSubCategory.value) query.set('selectedSubCategory', String(selectedSubCategory.value))
-  if (periodType.value) query.set('periodType', String(periodType.value))
+  if (yearBarChart.value) query.set('yearBarChart', String(yearBarChart.value))
   if (isIncludeHighExpenseRecord.value)
     query.set('isIncludeHighExpenseRecord', String(isIncludeHighExpenseRecord.value))
 

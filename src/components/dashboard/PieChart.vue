@@ -23,9 +23,7 @@
     </div>
     <div class="p-5 w-full flex flex-col justify-center items-center">
       <PieChartQueryTool />
-      <p v-if="props.pieChartData.pieChartData.length === 0" class="text-center py-5">No Data</p>
       <Chart
-        v-else
         :data="chartData"
         :options="chartOptions"
         type="pie"
