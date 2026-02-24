@@ -111,7 +111,7 @@
             <div class="flex items-center justify-between">
               <Select v-model="selectedSecondMonth">
                 <SelectTrigger class="w-[48%]">
-                  <SelectValue secondMonthPlaceholder="Month" />
+                  <SelectValue secondCalendarPlaceholder="Month" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="(m, i) in 12" :key="i" :value="(i + 1).toString()">
@@ -122,7 +122,7 @@
 
               <Select v-model="selectedSecondYear">
                 <SelectTrigger class="w-[48%]">
-                  <SelectValue secondMonthPlaceholder="Year" />
+                  <SelectValue secondCalendarPlaceholder="Year" />
                 </SelectTrigger>
                 <SelectContent class="max-h-[300px]">
                   <SelectItem
@@ -171,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { type DateValue, isEqualMonth, today } from '@internationalized/date'
+import { type DateValue, isEqualMonth, today, parseDate } from '@internationalized/date'
 
 import { Calendar } from 'lucide-vue-next'
 import { type DateRange, RangeCalendarRoot, useDateFormatter } from 'reka-ui'
@@ -199,17 +199,22 @@ import {
   RangeCalendarHeadCell,
 } from '@/components/ui/range-calendar'
 
+const props = defineProps<{
+  defaultStartDate?: string
+  defaultEndDate?: string
+}>()
+
 const current = today('Asia/Phnom_Penh')
 const value = ref({
-  start: current.subtract({ days: 365 }),
-  end: current,
+  start: props.defaultStartDate ? parseDate(props.defaultStartDate) : parseDate('2025-01-01'),
+  end: props.defaultEndDate ? parseDate(props.defaultEndDate) : current,
 }) as Ref<DateRange>
 
 const locale = ref('en-US')
 const formatter = useDateFormatter(locale.value)
 
 const placeholder = ref(value.value.start) as Ref<DateValue>
-const secondMonthPlaceholder = ref(value.value.end) as Ref<DateValue>
+const secondCalendarPlaceholder = ref(value.value.end) as Ref<DateValue>
 
 const firstMonth = ref(
   createMonth({
@@ -221,7 +226,7 @@ const firstMonth = ref(
 ) as Ref<Grid<DateValue>>
 const secondMonth = ref(
   createMonth({
-    dateObj: secondMonthPlaceholder.value,
+    dateObj: secondCalendarPlaceholder.value,
     locale: locale.value,
     fixedWeeks: true,
     weekStartsOn: 0,
@@ -262,9 +267,9 @@ watch(placeholder, (_placeholder) => {
   })
 })
 
-watch(secondMonthPlaceholder, (_secondMonthPlaceholder) => {
+watch(secondCalendarPlaceholder, (_secondCalendarPlaceholder) => {
   secondMonth.value = createMonth({
-    dateObj: _secondMonthPlaceholder,
+    dateObj: _secondCalendarPlaceholder,
     weekStartsOn: 0,
     fixedWeeks: false,
     locale: locale.value,
@@ -292,21 +297,21 @@ const selectedYear = computed({
 })
 
 const selectedSecondMonth = computed({
-  get: () => secondMonthPlaceholder.value.month.toString(),
+  get: () => secondCalendarPlaceholder.value.month.toString(),
   set: (val: string) => {
     const num = Number(val)
     if (!isNaN(num)) {
-      secondMonthPlaceholder.value = secondMonthPlaceholder.value.set({ month: num })
+      secondCalendarPlaceholder.value = secondCalendarPlaceholder.value.set({ month: num })
     }
   },
 })
 
 const selectedSecondYear = computed({
-  get: () => secondMonthPlaceholder.value.year.toString(),
+  get: () => secondCalendarPlaceholder.value.year.toString(),
   set: (val: string) => {
     const num = Number(val)
     if (!isNaN(num)) {
-      secondMonthPlaceholder.value = secondMonthPlaceholder.value.set({ year: num })
+      secondCalendarPlaceholder.value = secondCalendarPlaceholder.value.set({ year: num })
     }
   },
 })
@@ -332,8 +337,8 @@ function handleSecondCalendarClick(day: DateValue) {
   }
 
   // Update placeholder month if clicked day is from a different month
-  if (!isEqualMonth(day, secondMonthPlaceholder.value)) {
-    secondMonthPlaceholder.value = day
+  if (!isEqualMonth(day, secondCalendarPlaceholder.value)) {
+    secondCalendarPlaceholder.value = day
   }
 }
 </script>

@@ -31,6 +31,7 @@ import { ref, watch } from 'vue'
 
 const props = defineProps<{
   selectOptions: { label: string; value: string }[]
+  defaultValue?: string
   placeholder: string
 }>()
 
@@ -38,7 +39,7 @@ const emit = defineEmits<{
   (event: 'select', value: string): void
 }>()
 
-const selectedOption = ref('')
+const selectedOption = ref(props.defaultValue || '')
 
 watch(selectedOption, (newValue) => {
   emit('select', newValue)

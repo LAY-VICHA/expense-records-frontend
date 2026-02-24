@@ -17,8 +17,11 @@ import { Search } from 'lucide-vue-next'
 import { Input } from '@/components/ui/input'
 import { ref, watch } from 'vue'
 
-const props = defineProps(['placeholder'])
-const searchQuery = ref('')
+const props = defineProps<{
+  defaultValue?: string
+  placeholder: string
+}>()
+const searchQuery = ref(props.defaultValue || '')
 const emit = defineEmits<{
   (e: 'search', value: string): void
 }>()

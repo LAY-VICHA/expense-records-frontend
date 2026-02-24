@@ -58,7 +58,7 @@
       </div>
     </section>
 
-    <HighExpenseList />  
+    <HighExpenseList />
   </div>
 </template>
 

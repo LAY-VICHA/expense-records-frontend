@@ -40,7 +40,7 @@ export async function apiFetch<TResult>(
 
   if (!response.value.ok) {
     const errorData = await response.value.json()
-    throw { message: `API error: ${errorData.message}`, status: response.value.status }
+    throw { message: `${errorData.message}`, status: response.value.status }
   }
 
   return response.value.json().then(ok).catch(err)

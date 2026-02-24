@@ -10,14 +10,6 @@
           placeholder="Search record by reason..."
           class="max-w-sm"
         />
-        <Button
-          variant="destructive"
-          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition cursor-pointer"
-          @click="handleReset"
-          aria-label="reset filter button"
-        >
-          Reset Filters
-        </Button>
       </div>
     </div>
 
@@ -83,7 +75,6 @@
 import Loading from '@/components/Loading.vue'
 import PaginationComponent from '@/components/PaginationComponent.vue'
 import SearchComponent from '@/components/SearchComponent.vue'
-import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -116,11 +107,6 @@ const handleSearch = (searchQuery: string) => {
       reason: searchQuery || '',
     },
   })
-}
-
-const handleReset = () => {
-  resetSearchKey.value++
-  router.replace({ query: {} })
 }
 
 const { data, isLoading } = useNoRetryQuery<ApiResponse<PaginatedResult<ExpenseRecord>>>({

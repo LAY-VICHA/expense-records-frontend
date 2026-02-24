@@ -5,6 +5,7 @@
         @select="handleSelectedCategory"
         :key="resetCategoryKey"
         :selectOptions="categoryOptions"
+        :defaultValue="selectedCategoryValue"
         placeholder="Select a category"
       />
 
@@ -91,21 +92,24 @@ import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const router = useRouter()
-const selectedCategoryValue = ref<string>('')
-const selectedSubCategory = ref<string>('')
-const selectedYear = ref<string>(route.query.yearBarChart as string || new Date().getFullYear().toString())
-const isIncludeHighExepense = ref<boolean>(false)
+const selectedCategoryValue = ref<string>((route.query.selectedCategory as string) || '')
+const selectedSubCategory = ref<string>((route.query.selectedSubCategory as string) || '')
+const selectedYear = ref<string>(
+  (route.query.yearBarChart as string) || new Date().getFullYear().toString(),
+)
+const isIncludeHighExepense = ref<boolean>(route.query.isIncludeHighExpenseRecord === 'true')
 const resetCategoryKey = ref(0)
 
-const handleSelectedCategory = (category: string) => {
+const handleSelectedCategory = async (category: string) => {
   selectedCategoryValue.value = category
-  router.replace({
+  await router.replace({
     query: {
       ...route.query,
       selectedCategory: category || '',
       selectedSubCategory: '',
     },
   })
+  selectedSubCategory.value = ''
 }
 
 watch(selectedSubCategory, (newValue) => {
@@ -145,7 +149,6 @@ const handleYear = (yearBarChart: string) => {
       yearBarChart: yearBarChart || '',
     },
   })
-  
 }
 
 const { data } = useNoRetryQuery<ApiResponse<AllCategories>>({
@@ -173,13 +176,12 @@ const fetchCategory = async (): Promise<ApiResponse<AllCategories>> => {
   return response.value
 }
 
-const handleReset = () => {
-  resetCategoryKey.value++
+const handleReset = async () => {
   selectedCategoryValue.value = ''
-  selectedSubCategory.value = ''
+  resetCategoryKey.value++
   selectedYear.value = new Date().getFullYear().toString()
   isIncludeHighExepense.value = false
-  router.replace({
+  await router.replace({
     query: {
       ...route.query,
       selectedCategory: '',
@@ -188,5 +190,6 @@ const handleReset = () => {
       isIncludeHighExpenseRecord: 'false',
     },
   })
+  selectedSubCategory.value = ''
 }
 </script>

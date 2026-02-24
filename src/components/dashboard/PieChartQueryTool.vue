@@ -118,9 +118,11 @@ const router = useRouter()
 const selectedYear = ref<string>(
   (route.query.yearBarChart as string) || new Date().getFullYear().toString(),
 )
-const selectedMonth = ref<string>(String(route.query.month))
+const selectedMonth = ref<string>(route.query.month ? String(route.query.month) : '')
 const groupBy = ref<string>(route.query.groupBy === 'subCategory' ? 'subCategory' : 'category')
-const isIncludeHighExepense = ref<boolean>(false)
+const isIncludeHighExepense = ref<boolean>(
+  route.query.isIncludeHighExpenseRecordPieChart === 'true',
+)
 
 watch(selectedYear, (newValue) => {
   handleYear(newValue)
@@ -130,7 +132,7 @@ const handleYear = (year: string) => {
   router.replace({
     query: {
       ...route.query,
-      year: year || '',
+      yearBarChart: year || '',
     },
   })
 }
@@ -156,7 +158,7 @@ const handleGroupBy = (groupBy: string) => {
   router.replace({
     query: {
       ...route.query,
-      groupBy: groupBy || '',
+      groupBy: groupBy || 'category',
     },
   })
 }
@@ -185,19 +187,19 @@ const handleClearMonth = () => {
   selectedMonth.value = ''
 }
 
-const handleReset = () => {
-  selectedYear.value = new Date().getFullYear().toString()
-  selectedMonth.value = ''
-  groupBy.value = 'category'
-  isIncludeHighExepense.value = false
-  router.replace({
+const handleReset = async () => {
+  await router.replace({
     query: {
       ...route.query,
-      year: new Date().getFullYear().toString(),
+      yearBarChart: new Date().getFullYear().toString(),
       month: '',
       groupBy: 'category',
       isIncludeHighExpenseRecordPieChart: 'false',
     },
   })
+  selectedYear.value = new Date().getFullYear().toString()
+  selectedMonth.value = ''
+  groupBy.value = 'category'
+  isIncludeHighExepense.value = false
 }
 </script>

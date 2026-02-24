@@ -4,18 +4,21 @@
       <SearchComponent
         @search="handleSearch"
         :key="resetSearchKey"
+        :defaultValue="defaultSearch"
         placeholder="Search record by reason..."
       />
       <SelectComponent
         @select="handleSortBy"
         :key="resetSortByKey"
         :selectOptions="sortOptions"
+        :defaultValue="defaultSortBy"
         placeholder="Select an options sort by"
       />
       <SelectComponent
         @select="handleFilterCategory"
         :key="resetFilterCategoryKey"
         :selectOptions="categoryOptions"
+        :defaultValue="selectedCategory"
         placeholder="Select a category"
       />
 
@@ -45,7 +48,12 @@
         </SelectContent>
       </Select>
 
-      <DatePicker :key="resetDatePickerKey" @selectedDate="onDateRangeSelected" />
+      <DatePicker
+        :key="resetDatePickerKey"
+        @selectedDate="onDateRangeSelected"
+        :defaultStartDate="defaultFilterStartDate"
+        :defaultEndDate="defaultFilterEndDate"
+      />
     </div>
     <div class="w-full flex flex-wrap justify-end gap-2.5 pt-2">
       <ImportExpenseRecord />
@@ -87,12 +95,27 @@ import { useNoRetryQuery } from '@/lib/noRetryQuery'
 
 const route = useRoute()
 const router = useRouter()
-const selectedSubCategory = ref('')
-const selectedCategory = ref<string>('')
+const selectedSubCategory = ref<string>((route.query.filterSubCategory as string) || '')
+const selectedCategory = ref<string>((route.query.filterCategory as string) || '')
+let defaultSortBy = route.query.sortBy ? String(route.query.sortBy) : ''
+let defaultSearch = route.query.reason ? String(route.query.reason) : ''
 const resetSearchKey = ref(0)
 const resetSortByKey = ref(0)
 const resetFilterCategoryKey = ref(0)
 const resetDatePickerKey = ref(0)
+
+const normalizeDate = (date: string) => {
+  const [year, month, day] = date.split('-')
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
+let defaultFilterStartDate = route.query.filterStartDate
+  ? normalizeDate(String(route.query.filterStartDate))
+  : undefined
+
+let defaultFilterEndDate = route.query.filterEndDate
+  ? normalizeDate(String(route.query.filterEndDate))
+  : undefined
 
 const sortOptions = [
   { label: 'Newest', value: 'newest' },
@@ -123,9 +146,9 @@ const handleSortBy = (sortOption: string) => {
   })
 }
 
-const handleFilterCategory = (category: string) => {
+const handleFilterCategory = async (category: string) => {
   selectedCategory.value = category
-  router.replace({
+  await router.replace({
     query: {
       ...route.query,
       page: 1,
@@ -134,6 +157,7 @@ const handleFilterCategory = (category: string) => {
       filterSubCategory: '',
     },
   })
+  selectedSubCategory.value = ''
 }
 
 watch(selectedSubCategory, (newValue) => {
@@ -163,14 +187,18 @@ const onDateRangeSelected = (date: { start: string; end: string }) => {
   })
 }
 
-const handleReset = () => {
+const handleReset = async () => {
+  await router.replace({ query: {} })
   resetSearchKey.value++
   resetSortByKey.value++
   resetFilterCategoryKey.value++
   resetDatePickerKey.value++
   selectedSubCategory.value = ''
   selectedCategory.value = ''
-  router.replace({ query: {} })
+  defaultSearch = ''
+  defaultSortBy = ''
+  defaultFilterStartDate = undefined
+  defaultFilterEndDate = undefined
 }
 
 const { data } = useNoRetryQuery<ApiResponse<AllCategories>>({
