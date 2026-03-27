@@ -4,204 +4,186 @@
       <DialogHeader>
         <DialogTitle>Edit Expense Record</DialogTitle>
       </DialogHeader>
-      <Form
-        v-slot="{ handleSubmit }"
-        as=""
-        :validation-schema="formSchema"
-        :initial-values="{
-          expenseDate: expenseDateValue,
-          categoryId: props.expenseRecord?.categoryId || '',
-          subCategoryId: props.expenseRecord?.subCategoryId || '',
-          amount: props.expenseRecord?.amount || '',
-          currency: props.expenseRecord?.currency || 'USD',
-          reason: props.expenseRecord?.reason || '',
-        }"
-      >
-        <div class="grid gap-4 py-4">
-          <form
-            id="editDialogForm"
-            @submit.prevent="handleSubmit($event, onSubmit)"
-            class="grid gap-4"
-          >
-            <FormField v-slot="{ componentField }" name="expenseDate">
-              <FormItem class="flex flex-col">
-                <FormLabel>Expense Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger as-child>
-                    <Button
-                      variant="outline"
-                      :class="
-                        cn(
-                          'w-full justify-start text-left font-normal cursor-pointer',
-                          !expenseDateValue && 'text-muted-foreground',
-                        )
+      <div class="grid gap-4 py-4">
+        <form id="editDialogForm" @submit.prevent="onSubmit" class="grid gap-4">
+          <FormField v-slot="{ componentField }" name="expenseDate">
+            <FormItem class="flex flex-col">
+              <FormLabel>Expense Date</FormLabel>
+              <Popover>
+                <PopoverTrigger as-child>
+                  <Button
+                    variant="outline"
+                    :class="
+                      cn(
+                        'w-full justify-start text-left font-normal cursor-pointer',
+                        !expenseDateValue && 'text-muted-foreground',
+                      )
+                    "
+                  >
+                    <CalendarIcon class="mr-2 h-4 w-4" />
+                    {{
+                      expenseDateValue
+                        ? df.format(expenseDateValue.toDate(getLocalTimeZone()))
+                        : 'Pick a date'
+                    }}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent class="w-auto p-0">
+                  <Calendar
+                    v-bind="componentField"
+                    @update:modelValue="
+                      (val) => {
+                        if (val) expenseDateValue = val
+                      }
+                    "
+                    initial-focus
+                    :min-value="new CalendarDate(1900, 1, 1)"
+                    :max-value="today(getLocalTimeZone())"
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+          <FormField v-slot="{ componentField }" name="categoryId">
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+
+              <Select
+                v-bind="componentField"
+                @update:modelValue="selectedCategory = String($event)"
+                class="w-[300px]"
+              >
+                <FormControl class="w-full cursor-pointer">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent v-if="allCategories" class="max-h-[200px] overflow-y-auto">
+                  <SelectGroup>
+                    <SelectItem
+                      v-for="category in allCategories"
+                      :key="category.id"
+                      :value="category.id"
+                      class="cursor-pointer"
+                    >
+                      {{ category.name }}
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+          <FormField v-slot="{ componentField }" name="subCategoryId">
+            <FormItem>
+              <FormLabel>Sub Category</FormLabel>
+
+              <Select v-bind="componentField" class="w-[300px]">
+                <FormControl class="w-full cursor-pointer" aria-label="Select button">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a sub category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent v-if="allCategories" class="max-h-[250px] overflow-y-auto">
+                  <SelectGroup v-for="category in allCategories" :key="category.id">
+                    <div
+                      v-if="
+                        category.subCategories.length > 0 &&
+                        selectedCategory.valueOf() === category.id
                       "
                     >
-                      <CalendarIcon class="mr-2 h-4 w-4" />
-                      {{
-                        expenseDateValue
-                          ? df.format(expenseDateValue.toDate(getLocalTimeZone()))
-                          : 'Pick a date'
-                      }}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent class="w-auto p-0">
-                    <Calendar
-                      v-bind="componentField"
-                      v-model="expenseDateValue"
-                      initial-focus
-                      :min-value="new CalendarDate(1900, 1, 1)"
-                      :max-value="today(getLocalTimeZone())"
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="categoryId">
-              <FormItem>
-                <FormLabel>Category</FormLabel>
-
-                <Select
-                  v-bind="componentField"
-                  @update:modelValue="selectedCategory = String($event)"
-                  class="w-[300px]"
-                >
-                  <FormControl class="w-full cursor-pointer">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent v-if="allCategories" class="max-h-[200px] overflow-y-auto">
-                    <SelectGroup>
+                      <SelectLabel>{{ category.name }}</SelectLabel>
                       <SelectItem
-                        v-for="category in allCategories"
-                        :key="category.id"
-                        :value="category.id"
+                        v-for="subCategory in category.subCategories"
+                        :key="subCategory.id"
+                        :value="subCategory.id"
                         class="cursor-pointer"
                       >
-                        {{ category.name }}
+                        {{ subCategory.name }}
                       </SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="subCategoryId">
-              <FormItem>
-                <FormLabel>Sub Category</FormLabel>
-
-                <Select v-bind="componentField" class="w-[300px]">
-                  <FormControl class="w-full cursor-pointer" aria-label="Select button">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a sub category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent v-if="allCategories" class="max-h-[250px] overflow-y-auto">
-                    <SelectGroup v-for="category in allCategories" :key="category.id">
-                      <div
-                        v-if="
-                          category.subCategories.length > 0 &&
-                          selectedCategory.valueOf() === category.id
-                        "
-                      >
-                        <SelectLabel>{{ category.name }}</SelectLabel>
-                        <SelectItem
-                          v-for="subCategory in category.subCategories"
-                          :key="subCategory.id"
-                          :value="subCategory.id"
-                          class="cursor-pointer"
-                        >
-                          {{ subCategory.name }}
-                        </SelectItem>
-                      </div>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <div class="flex gap-4">
-              <FormField v-slot="{ componentField }" name="amount">
-                <FormItem>
-                  <FormLabel>Amount</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="any"
-                      placeholder="Enter amount of expense"
-                      v-bind="componentField"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-
-              <FormField v-slot="{ componentField }" name="currency">
-                <FormItem class="">
-                  <FormLabel>Currency</FormLabel>
-
-                  <FormControl>
-                    <div class="flex">
-                      <div class="flex-1">
-                        <input
-                          type="radio"
-                          id="usd"
-                          value="USD"
-                          v-bind="componentField"
-                          class="peer hidden"
-                          :checked="props.expenseRecord?.currency === 'USD'"
-                        />
-                        <label
-                          for="usd"
-                          dir="ltr"
-                          class="block text-sm text-center w-full peer-checked:bg-secondary peer-checked:text-white bg-muted text-muted-foreground px-4 py-1.5 rounded-s-md cursor-pointer transition"
-                        >
-                          USD
-                        </label>
-                      </div>
-
-                      <div class="flex-1">
-                        <input
-                          type="radio"
-                          id="khr"
-                          value="KHR"
-                          v-bind="componentField"
-                          class="peer hidden"
-                          :checked="props.expenseRecord?.currency === 'KHR'"
-                        />
-                        <label
-                          for="khr"
-                          dir="rtl"
-                          class="block text-sm text-center w-full peer-checked:bg-secondary peer-checked:text-white bg-muted text-muted-foreground px-4 py-1.5 rounded-s-md cursor-pointer transition"
-                        >
-                          KHR
-                        </label>
-                      </div>
                     </div>
-                  </FormControl>
-
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-            </div>
-            <FormField v-slot="{ componentField }" name="reason">
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+          <div class="flex gap-4">
+            <FormField v-slot="{ componentField }" name="amount">
               <FormItem>
-                <FormLabel>Reason</FormLabel>
+                <FormLabel>Amount</FormLabel>
                 <FormControl>
-                  <Textarea
-                    type="text"
-                    placeholder="Enter expense reason"
+                  <Input
+                    type="number"
+                    step="any"
+                    placeholder="Enter amount of expense"
                     v-bind="componentField"
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             </FormField>
-          </form>
-        </div>
-      </Form>
+
+            <FormField v-slot="{ componentField }" name="currency">
+              <FormItem class="">
+                <FormLabel>Currency</FormLabel>
+
+                <FormControl>
+                  <div class="flex">
+                    <div class="flex-1">
+                      <input
+                        type="radio"
+                        id="usd"
+                        value="USD"
+                        v-bind="componentField"
+                        class="peer hidden"
+                        :checked="props.expenseRecord?.currency === 'USD'"
+                      />
+                      <label
+                        for="usd"
+                        dir="ltr"
+                        class="block text-sm text-center w-full peer-checked:bg-secondary peer-checked:text-white bg-muted text-muted-foreground px-4 py-1.5 rounded-s-md cursor-pointer transition"
+                      >
+                        USD
+                      </label>
+                    </div>
+
+                    <div class="flex-1">
+                      <input
+                        type="radio"
+                        id="khr"
+                        value="KHR"
+                        v-bind="componentField"
+                        class="peer hidden"
+                        :checked="props.expenseRecord?.currency === 'KHR'"
+                      />
+                      <label
+                        for="khr"
+                        dir="rtl"
+                        class="block text-sm text-center w-full peer-checked:bg-secondary peer-checked:text-white bg-muted text-muted-foreground px-4 py-1.5 rounded-s-md cursor-pointer transition"
+                      >
+                        KHR
+                      </label>
+                    </div>
+                  </div>
+                </FormControl>
+
+                <FormMessage />
+              </FormItem>
+            </FormField>
+          </div>
+          <FormField v-slot="{ componentField }" name="reason">
+            <FormItem>
+              <FormLabel>Reason</FormLabel>
+              <FormControl>
+                <Textarea type="text" placeholder="Enter expense reason" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+      </div>
 
       <DialogFooter>
         <Button
@@ -229,14 +211,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import {
   Select,
   SelectContent,
@@ -258,16 +233,12 @@ import { toast } from 'vue3-toastify'
 import Loading from '../Loading.vue'
 import { useRoute } from 'vue-router'
 import { AllCategories, ApiResponse, EditExpenseReocrd } from '@/types/api-response'
-import {
-  CalendarDate,
-  DateFormatter,
-  DateValue,
-  getLocalTimeZone,
-  today,
-} from '@internationalized/date'
+import { CalendarDate, DateFormatter, getLocalTimeZone, today } from '@internationalized/date'
+import type { DateValue } from '@internationalized/date'
 import { cn } from '@/lib/utils'
 import { apiFetch } from '@/lib/api'
 import { useNoRetryQuery } from '@/lib/noRetryQuery'
+import { useForm } from 'vee-validate'
 
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
@@ -351,6 +322,29 @@ const formSchema = toTypedSchema(
   }),
 )
 
+const form = useForm({
+  validationSchema: formSchema,
+})
+
+watch(
+  () => props.expenseRecord,
+  (record) => {
+    if (!record) return
+
+    form.resetForm({
+      values: {
+        expenseDate: expenseDateValue.value,
+        categoryId: record.categoryId || '',
+        subCategoryId: record.subCategoryId || '',
+        amount: Number(record.amount) || 0,
+        currency: record.currency || 'USD',
+        reason: record.reason || '',
+      },
+    })
+  },
+  { immediate: true },
+)
+
 const df = new DateFormatter('en-US', {
   dateStyle: 'long',
 })
@@ -413,12 +407,17 @@ const mutation = useMutation({
   },
 })
 
-const onSubmit = (values: EditExpenseReocrdWithDateString) => {
-  if (expenseDateValue.value) {
-    const date = expenseDateValue.value.toDate(getLocalTimeZone())
-    const formattedDate = date.toLocaleDateString('sv-SE')
-    values.expenseDate = formattedDate
-  }
-  mutation.mutate(values)
-}
+const onSubmit = form.handleSubmit((values) => {
+  const date = expenseDateValue.value.toDate(getLocalTimeZone())
+  const formattedDate = date.toLocaleDateString('sv-SE')
+  mutation.mutate({
+    id: props.expenseRecord.id,
+    expenseDate: formattedDate,
+    categoryId: values.categoryId,
+    subCategoryId: values.subCategoryId || null,
+    amount: String(values.amount),
+    currency: values.currency,
+    reason: values.reason || null,
+  })
+})
 </script>

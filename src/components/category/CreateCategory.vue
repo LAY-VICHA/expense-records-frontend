@@ -1,54 +1,52 @@
 <template>
-  <Form v-slot="{ handleSubmit }" as="" :validation-schema="formSchema">
-    <Dialog v-model:open="isDialogOpen">
-      <DialogTrigger as-child>
-        <Button class="cursor-pointer"> Create </Button>
-      </DialogTrigger>
-      <DialogContent class="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create Category</DialogTitle>
-        </DialogHeader>
-        <div class="grid gap-4 py-4">
-          <form id="dialogForm" @submit.prevent="handleSubmit($event, onSubmit)" class="grid gap-4">
-            <FormField v-slot="{ componentField }" name="name">
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input type="text" placeholder="Enter category name" v-bind="componentField" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="description">
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea
-                    type="text"
-                    placeholder="Enter category description"
-                    v-bind="componentField"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-          </form>
-        </div>
+  <Dialog v-model:open="isDialogOpen">
+    <DialogTrigger as-child>
+      <Button class="cursor-pointer"> Create </Button>
+    </DialogTrigger>
+    <DialogContent class="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>Create Category</DialogTitle>
+      </DialogHeader>
+      <div class="grid gap-4 py-4">
+        <form id="dialogForm" @submit.prevent="onSubmit" class="grid gap-4">
+          <FormField v-slot="{ componentField }" name="name">
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="Enter category name" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+          <FormField v-slot="{ componentField }" name="description">
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  type="text"
+                  placeholder="Enter category description"
+                  v-bind="componentField"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+      </div>
 
-        <DialogFooter>
-          <Button
-            type="submit"
-            form="dialogForm"
-            :disabled="mutation.isPending.value"
-            class="cursor-pointer"
-          >
-            <Loading v-if="mutation.isPending.value" />
-            Submit
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </Form>
+      <DialogFooter>
+        <Button
+          type="submit"
+          form="dialogForm"
+          :disabled="mutation.isPending.value"
+          class="cursor-pointer"
+        >
+          <Loading v-if="mutation.isPending.value" />
+          Submit
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -61,14 +59,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
@@ -78,10 +69,11 @@ import Loading from '../Loading.vue'
 import { ref } from 'vue'
 import { toast } from 'vue3-toastify'
 import { apiFetch } from '@/lib/api'
+import { useForm } from 'vee-validate'
 
 interface CategoryFormValues {
   name: string
-  description: string
+  description?: string
 }
 const isDialogOpen = ref(false)
 const queryClient = useQueryClient()
@@ -92,6 +84,10 @@ const formSchema = toTypedSchema(
     description: z.string().max(200).optional(),
   }),
 )
+
+const form = useForm({
+  validationSchema: formSchema,
+})
 
 const createCategory = async (data: CategoryFormValues) => {
   const response = await apiFetch(`/category`, {
@@ -121,10 +117,10 @@ const mutation = useMutation({
   },
 })
 
-const onSubmit = (values: CategoryFormValues) => {
+const onSubmit = form.handleSubmit((values: CategoryFormValues) => {
   mutation.mutate({
     name: values.name,
     description: values.description,
   })
-}
+})
 </script>

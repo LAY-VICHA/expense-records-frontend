@@ -14,9 +14,9 @@
     "noEmit": true,
 
     // Aliases
-    "baseUrl": ".",
+    // "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
 
     // Vue support

@@ -98,7 +98,6 @@ const mutation = useMutation({
   },
   onError: (error) => {
     toast.error(error.message || 'Email sent failed')
-    error('Error email sent:', error)
   },
 })
 

@@ -4,81 +4,71 @@
       <DialogHeader>
         <DialogTitle>Edit Subcategory</DialogTitle>
       </DialogHeader>
-      <Form
-        v-slot="{ handleSubmit }"
-        :validation-schema="formSchema"
-        :initial-values="{
-          name: props.subCategory?.name,
-          description: props.subCategory?.description,
-          categoryId: props.subCategory?.category.id,
-        }"
-      >
-        <div class="grid gap-4 py-4">
-          <form id="editForm" @submit.prevent="handleSubmit(onSubmit)" class="grid gap-4">
-            <FormField v-slot="{ componentField }" name="categoryId">
-              <FormItem>
-                <FormLabel>Category</FormLabel>
+      <div class="grid gap-4 py-4">
+        <form id="editForm" @submit.prevent="onSubmit" class="grid gap-4">
+          <FormField v-slot="{ componentField }" name="categoryId">
+            <FormItem>
+              <FormLabel>Category</FormLabel>
 
-                <Select v-bind="componentField" class="w-[300px]">
-                  <FormControl class="w-full cursor-pointer">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent v-if="allCategories" class="max-h-[200px] overflow-y-auto">
-                    <SelectGroup>
-                      <SelectItem
-                        v-for="category in allCategories"
-                        :key="category.id"
-                        :value="category.id"
-                        class="cursor-pointer"
-                      >
-                        {{ category.name }}
-                      </SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="name">
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input v-bind="componentField" placeholder="Enter subcategory name" />
+              <Select v-bind="componentField" class="w-[300px]">
+                <FormControl class="w-full cursor-pointer">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="description">
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea v-bind="componentField" placeholder="Enter subcategory description" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-          </form>
-        </div>
-        <DialogFooter>
-          <Button
-            type="submit"
-            form="editForm"
-            :disabled="mutation.isPending.value"
-            class="cursor-pointer"
-          >
-            <Loading v-if="mutation.isPending.value" />
-            Save Changes
-          </Button>
-        </DialogFooter>
-      </Form>
+                <SelectContent v-if="allCategories" class="max-h-[200px] overflow-y-auto">
+                  <SelectGroup>
+                    <SelectItem
+                      v-for="category in allCategories"
+                      :key="category.id"
+                      :value="category.id"
+                      class="cursor-pointer"
+                    >
+                      {{ category.name }}
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+          <FormField v-slot="{ componentField }" name="name">
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input v-bind="componentField" placeholder="Enter subcategory name" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+          <FormField v-slot="{ componentField }" name="description">
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea v-bind="componentField" placeholder="Enter subcategory description" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+      </div>
+      <DialogFooter>
+        <Button
+          type="submit"
+          form="editForm"
+          :disabled="mutation.isPending.value"
+          class="cursor-pointer"
+        >
+          <Loading v-if="mutation.isPending.value" />
+          Save Changes
+        </Button>
+      </DialogFooter>
     </DialogContent>
   </Dialog>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -87,14 +77,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import {
   Select,
   SelectContent,
@@ -114,6 +97,7 @@ import { useRoute } from 'vue-router'
 import { AllCategories, ApiResponse, EditSubCategory } from '@/types/api-response'
 import { apiFetch } from '@/lib/api'
 import { useNoRetryQuery } from '@/lib/noRetryQuery'
+import { useForm } from 'vee-validate'
 
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
@@ -123,7 +107,7 @@ const name = computed(() => route.query.name ?? '')
 interface editedSubCategory {
   categoryId: string
   name: string
-  description: string
+  description?: string
 }
 
 const props = defineProps<{
@@ -148,6 +132,26 @@ const formSchema = toTypedSchema(
     name: z.string().min(2).max(50),
     description: z.string().max(200).optional(),
   }),
+)
+
+const form = useForm({
+  validationSchema: formSchema,
+})
+
+watch(
+  () => props.subCategory,
+  (record) => {
+    if (!record) return
+
+    form.resetForm({
+      values: {
+        categoryId: record.category.id || '',
+        name: record.name || '',
+        description: record.description,
+      },
+    })
+  },
+  { immediate: true },
 )
 
 const fetchAllCategory = async (): Promise<ApiResponse<AllCategories>> => {
@@ -203,7 +207,7 @@ const mutation = useMutation({
   },
 })
 
-const onSubmit = (values: editedSubCategory) => {
+const onSubmit = form.handleSubmit((values: editedSubCategory) => {
   mutation.mutate(values)
-}
+})
 </script>

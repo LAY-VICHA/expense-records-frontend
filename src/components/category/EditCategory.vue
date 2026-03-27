@@ -4,54 +4,47 @@
       <DialogHeader>
         <DialogTitle>Edit Category</DialogTitle>
       </DialogHeader>
-      <Form
-        v-slot="{ handleSubmit }"
-        :validation-schema="formSchema"
-        :initial-values="{
-          name: props.category?.name,
-          description: props.category?.description,
-        }"
-      >
-        <div class="grid gap-4 py-4">
-          <form id="editForm" @submit.prevent="handleSubmit(onSubmit)" class="grid gap-4">
-            <FormField v-slot="{ componentField }" name="name">
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input v-bind="componentField" placeholder="Enter category name" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="description">
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea v-bind="componentField" placeholder="Enter category description" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-          </form>
-        </div>
-        <DialogFooter>
-          <Button
-            type="submit"
-            form="editForm"
-            :disabled="mutation.isPending.value"
-            class="cursor-pointer"
-          >
-            <Loading v-if="mutation.isPending.value" />
-            Save Changes
-          </Button>
-        </DialogFooter>
-      </Form>
+      <div class="grid gap-4 py-4">
+        <form id="editForm" @submit.prevent="onSubmit" class="grid gap-4">
+          <FormField v-slot="{ componentField }" name="name">
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input v-bind="componentField" placeholder="Enter category name" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ componentField }" name="description">
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea v-bind="componentField" placeholder="Enter category description" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+      </div>
+
+      <DialogFooter>
+        <Button
+          type="submit"
+          form="editForm"
+          :disabled="mutation.isPending.value"
+          class="cursor-pointer"
+        >
+          <Loading v-if="mutation.isPending.value" />
+          Save Changes
+        </Button>
+      </DialogFooter>
     </DialogContent>
   </Dialog>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -60,14 +53,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
@@ -77,6 +63,7 @@ import { toast } from 'vue3-toastify'
 import Loading from '../Loading.vue'
 import { useRoute } from 'vue-router'
 import { apiFetch } from '@/lib/api'
+import { useForm } from 'vee-validate'
 
 const route = useRoute()
 const page = computed(() => route.query.page ?? '1')
@@ -85,7 +72,7 @@ const name = computed(() => route.query.name ?? '')
 
 interface editedCategory {
   name: string
-  description: string
+  description?: string
 }
 
 const props = defineProps<{
@@ -109,6 +96,25 @@ const formSchema = toTypedSchema(
     name: z.string().min(2).max(50),
     description: z.string().max(200).optional(),
   }),
+)
+
+const form = useForm({
+  validationSchema: formSchema,
+})
+
+watch(
+  () => props.category,
+  (record) => {
+    if (!record) return
+
+    form.resetForm({
+      values: {
+        name: record.name || '',
+        description: record.description,
+      },
+    })
+  },
+  { immediate: true },
 )
 
 const mutation = useMutation({
@@ -142,12 +148,11 @@ const mutation = useMutation({
     })
   },
   onError: (error) => {
-    error
     toast.error(error.message || 'Update failed')
   },
 })
 
-const onSubmit = (values: editedCategory) => {
+const onSubmit = form.handleSubmit((values: editedCategory) => {
   mutation.mutate(values)
-}
+})
 </script>

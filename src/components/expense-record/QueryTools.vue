@@ -55,17 +55,20 @@
         :defaultEndDate="defaultFilterEndDate"
       />
     </div>
-    <div class="w-full flex flex-wrap justify-end gap-2.5 pt-2">
-      <ImportExpenseRecord />
-      <CreateExpenseRecord />
-      <Button
-        variant="destructive"
-        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition cursor-pointer"
-        @click="handleReset"
-        aria-label="reset filter button"
-      >
-        Reset Filters
-      </Button>
+    <div class="w-full flex flex-wrap justify-between gap-2.5 pt-4">
+      <GenerateReport />
+      <div class="flex flex-wrap justify-center gap-2.5">
+        <ImportExpenseRecord />
+        <CreateExpenseRecord />
+        <Button
+          variant="destructive"
+          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition cursor-pointer"
+          @click="handleReset"
+          aria-label="reset filter button"
+        >
+          Reset Filters
+        </Button>
+      </div>
     </div>
   </div>
 </template>
@@ -92,6 +95,7 @@ import CreateExpenseRecord from './CreateExpenseRecord.vue'
 import ImportExpenseRecord from './ImportExpenseRecord.vue'
 import { apiFetch } from '@/lib/api'
 import { useNoRetryQuery } from '@/lib/noRetryQuery'
+import GenerateReport from './GenerateReport.vue'
 
 const route = useRoute()
 const router = useRouter()

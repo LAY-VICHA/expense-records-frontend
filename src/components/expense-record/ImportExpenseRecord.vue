@@ -1,57 +1,55 @@
 <template>
-  <Form v-slot="{ handleSubmit }" as="" :validation-schema="formSchema">
-    <Dialog v-model:open="isDialogOpen">
-      <DialogTrigger as-child>
-        <Button variant="outline" class="cursor-pointer" aria-label="Import button">
-          <ArrowDownToLine />Import
-        </Button>
-      </DialogTrigger>
-      <DialogContent class="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Import Record via CSV </DialogTitle>
-        </DialogHeader>
-        <div class="grid gap-4 py-4">
-          <form id="dialogForm" @submit.prevent="handleSubmit($event, onSubmit)" class="grid gap-4">
-            <FormField v-slot="{ handleChange }" name="file">
-              <FormItem>
-                <FormLabel>CSV file</FormLabel>
-                <FormControl>
-                  <Input
-                    type="file"
-                    accept=".csv"
-                    placeholder="Import an csv file"
-                    class="cursor-pointer"
-                    @change="
-                      (e: Event) => {
-                        const target = e.target as HTMLInputElement
-                        if (target.files) {
-                          handleChange([...target.files])
-                        }
+  <Dialog v-model:open="isDialogOpen">
+    <DialogTrigger as-child>
+      <Button variant="outline" class="cursor-pointer" aria-label="Import button">
+        <ArrowDownToLine />Import
+      </Button>
+    </DialogTrigger>
+    <DialogContent class="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>Import Record via CSV </DialogTitle>
+      </DialogHeader>
+      <div class="grid gap-4 py-4">
+        <form id="dialogForm" @submit.prevent="onSubmit" class="grid gap-4">
+          <FormField v-slot="{ handleChange }" name="file">
+            <FormItem>
+              <FormLabel>CSV file</FormLabel>
+              <FormControl>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  placeholder="Import an csv file"
+                  class="cursor-pointer"
+                  @change="
+                    (e: Event) => {
+                      const target = e.target as HTMLInputElement
+                      if (target.files) {
+                        handleChange([...target.files])
                       }
-                    "
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-          </form>
-        </div>
+                    }
+                  "
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+      </div>
 
-        <DialogFooter>
-          <Button
-            type="submit"
-            form="dialogForm"
-            :disabled="mutation.isPending.value"
-            class="cursor-pointer"
-            aria-label="Submit button"
-          >
-            <Loading v-if="mutation.isPending.value" />
-            Submit
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </Form>
+      <DialogFooter>
+        <Button
+          type="submit"
+          form="dialogForm"
+          :disabled="mutation.isPending.value"
+          class="cursor-pointer"
+          aria-label="Submit button"
+        >
+          <Loading v-if="mutation.isPending.value" />
+          Submit
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -64,14 +62,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { ArrowDownToLine } from 'lucide-vue-next'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
@@ -81,6 +72,7 @@ import Loading from '../Loading.vue'
 import { ref } from 'vue'
 import { toast } from 'vue3-toastify'
 import { apiFetch } from '@/lib/api'
+import { useForm } from 'vee-validate'
 
 interface ImportExpenseRecordFormValues {
   file: File[]
@@ -99,6 +91,10 @@ const formSchema = toTypedSchema(
       ),
   }),
 )
+
+const form = useForm({
+  validationSchema: formSchema,
+})
 
 const ImportExpenseRecord = async (data: ImportExpenseRecordFormValues) => {
   const formData = new FormData()
@@ -128,9 +124,9 @@ const mutation = useMutation({
   },
 })
 
-const onSubmit = (values: ImportExpenseRecordFormValues) => {
+const onSubmit = form.handleSubmit((values: ImportExpenseRecordFormValues) => {
   mutation.mutate({
     file: values.file,
   })
-}
+})
 </script>

@@ -1,80 +1,78 @@
 <template>
-  <Form v-slot="{ handleSubmit }" as="" :validation-schema="formSchema">
-    <Dialog v-model:open="isDialogOpen">
-      <DialogTrigger as-child>
-        <Button class="cursor-pointer"> Create </Button>
-      </DialogTrigger>
-      <DialogContent class="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create Subcategory</DialogTitle>
-        </DialogHeader>
-        <div class="grid gap-4 py-4">
-          <form id="dialogForm" @submit.prevent="handleSubmit($event, onSubmit)" class="grid gap-4">
-            <FormField v-slot="{ componentField }" name="categoryId">
-              <FormItem>
-                <FormLabel>Category</FormLabel>
+  <Dialog v-model:open="isDialogOpen">
+    <DialogTrigger as-child>
+      <Button class="cursor-pointer"> Create </Button>
+    </DialogTrigger>
+    <DialogContent class="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>Create Subcategory</DialogTitle>
+      </DialogHeader>
+      <div class="grid gap-4 py-4">
+        <form id="dialogForm" @submit.prevent="onSubmit" class="grid gap-4">
+          <FormField v-slot="{ componentField }" name="categoryId">
+            <FormItem>
+              <FormLabel>Category</FormLabel>
 
-                <Select v-bind="componentField" class="w-[300px]">
-                  <FormControl class="w-full cursor-pointer">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent v-if="allCategories" class="max-h-[200px] overflow-y-auto">
-                    <SelectGroup>
-                      <SelectItem
-                        v-for="category in allCategories"
-                        :key="category.id"
-                        :value="category.id"
-                        class="cursor-pointer"
-                      >
-                        {{ category.name }}
-                      </SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="name">
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input type="text" placeholder="Enter subcategory name" v-bind="componentField" />
+              <Select v-bind="componentField" class="w-[300px]">
+                <FormControl class="w-full cursor-pointer">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-            <FormField v-slot="{ componentField }" name="description">
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea
-                    type="text"
-                    placeholder="Enter subcategory description"
-                    v-bind="componentField"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            </FormField>
-          </form>
-        </div>
+                <SelectContent v-if="allCategories" class="max-h-[200px] overflow-y-auto">
+                  <SelectGroup>
+                    <SelectItem
+                      v-for="category in allCategories"
+                      :key="category.id"
+                      :value="category.id"
+                      class="cursor-pointer"
+                    >
+                      {{ category.name }}
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+          <FormField v-slot="{ componentField }" name="name">
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="Enter subcategory name" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+          <FormField v-slot="{ componentField }" name="description">
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  type="text"
+                  placeholder="Enter subcategory description"
+                  v-bind="componentField"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+      </div>
 
-        <DialogFooter>
-          <Button
-            type="submit"
-            form="dialogForm"
-            :disabled="mutation.isPending.value"
-            class="cursor-pointer"
-          >
-            <Loading v-if="mutation.isPending.value" />
-            Submit
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </Form>
+      <DialogFooter>
+        <Button
+          type="submit"
+          form="dialogForm"
+          :disabled="mutation.isPending.value"
+          class="cursor-pointer"
+        >
+          <Loading v-if="mutation.isPending.value" />
+          Submit
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -87,14 +85,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import {
   Select,
   SelectContent,
@@ -114,11 +105,12 @@ import { toast } from 'vue3-toastify'
 import { ApiResponse, AllCategories } from '@/types/api-response'
 import { apiFetch } from '@/lib/api'
 import { useNoRetryQuery } from '@/lib/noRetryQuery'
+import { useForm } from 'vee-validate'
 
 interface SubCategoryFormValues {
   categoryId: string
   name: string
-  description: string
+  description?: string
 }
 const isDialogOpen = ref(false)
 const queryClient = useQueryClient()
@@ -130,6 +122,10 @@ const formSchema = toTypedSchema(
     description: z.string().max(200).optional(),
   }),
 )
+
+const form = useForm({
+  validationSchema: formSchema,
+})
 
 const fetchAllCategory = async (): Promise<ApiResponse<AllCategories>> => {
   const response = await apiFetch<ApiResponse<AllCategories>>(`/category/all`)
@@ -177,11 +173,11 @@ const mutation = useMutation({
   },
 })
 
-const onSubmit = (values: SubCategoryFormValues) => {
+const onSubmit = form.handleSubmit((values: SubCategoryFormValues) => {
   mutation.mutate({
     name: values.name,
     description: values.description,
     categoryId: values.categoryId,
   })
-}
+})
 </script>
